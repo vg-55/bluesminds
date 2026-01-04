@@ -14,8 +14,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { MailIcon, PhoneIcon, MapPinIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 
 export default function Home() {
+  const router = useRouter()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const pricingSectionRef = useRef<HTMLDivElement>(null)
   const aboutSectionRef = useRef<HTMLDivElement>(null)
@@ -178,7 +180,12 @@ export default function Home() {
               </p>
 
               <div className="flex justify-center">
-                <ShinyButton className="px-8 py-3 text-base">start building</ShinyButton>
+                <ShinyButton
+                  onClick={() => router.push('/signup')}
+                  className="px-8 py-3 text-base"
+                >
+                  start building
+                </ShinyButton>
               </div>
             </div>
           </div>
