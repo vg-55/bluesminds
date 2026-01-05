@@ -10,34 +10,26 @@ import type { ApiKey, RateLimitCheck, RateLimitWindow } from '@/lib/types'
 // Check all rate limits for an API key
 export async function checkRateLimits(
   apiKey: ApiKey,
-  estimatedTokens: number = 0
+  estimatedTokens: number = 0  // Kept for backward compatibility but ignored
 ): Promise<void> {
-  // Check RPM (requests per minute)
-  await checkRateLimit(apiKey.id, 'minute', estimatedTokens, apiKey)
-
-  // Check TPM (tokens per minute)
-  // Already checked in the above call with estimatedTokens
-
-  // Check daily quota
-  await checkRateLimit(apiKey.id, 'day', estimatedTokens, apiKey)
-
-  // Check monthly quota
-  await checkRateLimit(apiKey.id, 'month', estimatedTokens, apiKey)
+  // Check RPM ONLY (requests per minute)
+  // TPM, daily quota, and monthly token quotas are no longer enforced
+  await checkRateLimit(apiKey.id, 'minute', 0, apiKey)  // Always pass 0 for tokens
 }
 
 // Check a specific rate limit window
 async function checkRateLimit(
   apiKeyId: string,
   windowType: RateLimitWindow,
-  estimatedTokens: number,
+  estimatedTokens: number,  // Ignored - kept for backward compatibility
   apiKey: ApiKey
 ): Promise<void> {
   try {
-    // Call the database function to check rate limit
+    // Call the database function (which now only checks RPM)
     const { data, error } = await supabaseAdmin.rpc('check_rate_limit', {
       p_api_key_id: apiKeyId,
       p_window_type: windowType,
-      p_estimated_tokens: estimatedTokens,
+      p_estimated_tokens: 0,  // Always pass 0 to skip token checks
     })
 
     if (error) {
@@ -76,39 +68,30 @@ async function checkRateLimit(
 // Increment rate limit counters after successful request
 export async function incrementRateLimitCounters(
   apiKeyId: string,
-  tokensUsed: number
+  tokensUsed: number  // Still tracked for analytics, but not used for rate limiting
 ): Promise<void> {
   try {
     const now = new Date()
 
-    // Get window start times
-    const windows: Array<{ type: RateLimitWindow; start: Date }> = [
-      { type: 'minute', start: new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes()) },
-      { type: 'hour', start: new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours()) },
-      { type: 'day', start: new Date(now.getFullYear(), now.getMonth(), now.getDate()) },
-      { type: 'month', start: new Date(now.getFullYear(), now.getMonth(), 1) },
-    ]
+    // Only track minute-level for RPM enforcement
+    // Token counts are still logged for analytics but not used for rate limiting
+    const windowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())
 
-    // Increment counters for all windows in parallel
-    await Promise.all(
-      windows.map(async ({ type, start }) => {
-        const { error } = await supabaseAdmin.rpc('increment_rate_limit_counters', {
-          p_api_key_id: apiKeyId,
-          p_window_start: start.toISOString(),
-          p_window_type: type,
-          p_request_count: 1,
-          p_token_count: tokensUsed,
-        })
+    const { error } = await supabaseAdmin.rpc('increment_rate_limit_counters', {
+      p_api_key_id: apiKeyId,
+      p_window_start: windowStart.toISOString(),
+      p_window_type: 'minute',
+      p_request_count: 1,
+      p_token_count: tokensUsed,  // Still log for analytics
+    })
 
-        if (error) {
-          logger.warn('Failed to increment rate limit counter', {
-            error,
-            apiKeyId,
-            windowType: type,
-          })
-        }
+    if (error) {
+      logger.warn('Failed to increment rate limit counter', {
+        error,
+        apiKeyId,
+        windowType: 'minute',
       })
-    )
+    }
   } catch (error) {
     logger.error('Increment rate limit counters error', error, { apiKeyId })
     // Don't throw - this is non-critical, we don't want to fail the request
@@ -193,14 +176,19 @@ export async function getRateLimitUsage(apiKeyId: string): Promise<{
   }
 }
 
+// ============================================================================
+// TOKEN ESTIMATION (Legacy - kept for analytics, not used for rate limiting)
+// ============================================================================
+
 // Estimate tokens for a request (simple heuristic)
-// For more accurate counting, integrate tiktoken library
+// NOTE: No longer used for rate limiting, only for analytics/logging
 export function estimateTokens(text: string): number {
   // Rough estimate: ~4 characters per token for English text
   return Math.ceil(text.length / 4)
 }
 
 // Estimate tokens for chat completion request
+// NOTE: No longer used for rate limiting, only for analytics/logging
 export function estimateChatTokens(messages: Array<{ content: string }>): number {
   const totalChars = messages.reduce((acc, msg) => acc + msg.content.length, 0)
   return estimateTokens(totalChars) + messages.length * 4 // Add overhead for message structure

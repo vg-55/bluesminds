@@ -12,7 +12,7 @@ export function QuickActions() {
   return (
     <div className="flex gap-4 flex-wrap">
       <Link href="/dashboard/keys">
-        <Button className="bg-white text-black hover:bg-gray-100 [text-shadow:_0_1px_2px_rgb(0_0_0_/_10%)] font-open-sans-custom font-semibold shadow-[0_4px_20px_rgba(255,255,255,0.2)] hover:shadow-[0_4px_30px_rgba(255,255,255,0.3)] transition-all">
+        <Button className="bg-primary text-primary-foreground hover:bg-primary/90 font-mono transition-colors">
           <Plus className="w-4 h-4 mr-2" />
           Create API Key
         </Button>
@@ -21,7 +21,7 @@ export function QuickActions() {
       <Link href="/docs">
         <Button
           variant="outline"
-          className="border-white/30 bg-white/5 text-white hover:bg-white/10 hover:border-white/50 [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)] font-open-sans-custom font-semibold backdrop-blur-sm transition-all"
+          className="border-foreground/30 bg-foreground/5 text-foreground hover:bg-foreground/10 hover:border-foreground/50 font-mono backdrop-blur-sm transition-colors"
         >
           <Book className="w-4 h-4 mr-2" />
           View Documentation
@@ -30,7 +30,7 @@ export function QuickActions() {
 
       <Button
         variant="outline"
-        className="border-white/30 bg-white/5 text-white hover:bg-white/10 hover:border-white/50 [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)] font-open-sans-custom font-semibold backdrop-blur-sm transition-all"
+        className="border-foreground/30 bg-foreground/5 text-foreground hover:bg-foreground/10 hover:border-foreground/50 font-mono backdrop-blur-sm transition-colors"
         onClick={() => {
           const code = `from openai import OpenAI
 

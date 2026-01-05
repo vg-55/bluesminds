@@ -73,9 +73,8 @@ export function ApiKeysList({ apiKeys }: { apiKeys: ApiKey[] }) {
 
   if (apiKeys.length === 0) {
     return (
-      <div className="relative group bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-12 text-center shadow-[0_8px_32px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_32px_rgba(255,255,255,0.1)] transition-all duration-300">
-        <div className="absolute inset-0 bg-gradient-to-br from-white/0 to-white/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-        <p className="relative z-10 text-gray-400 [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)] font-open-sans-custom">
+      <div className="relative group bg-foreground/[0.02] backdrop-blur-xl border border-foreground/10 rounded-xl p-12 text-center hover:border-foreground/20 transition-colors">
+        <p className="relative z-10 text-foreground/60 font-mono">
           No API keys yet. Create one to get started.
         </p>
       </div>
@@ -87,20 +86,20 @@ export function ApiKeysList({ apiKeys }: { apiKeys: ApiKey[] }) {
       {apiKeys.map((key) => (
         <div
           key={key.id}
-          className="relative group bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_32px_rgba(255,255,255,0.1)]"
+          className="relative group bg-foreground/[0.02] backdrop-blur-xl border border-foreground/10 rounded-xl p-6 hover:bg-foreground/5 hover:border-foreground/20 transition-colors"
         >
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-3">
-                <h3 className="text-lg font-semibold text-white [text-shadow:_0_2px_10px_rgb(0_0_0_/_60%)] font-open-sans-custom">
+                <h3 className="text-lg font-semibold text-foreground font-mono">
                   {key.name}
                 </h3>
                 {key.is_active ? (
-                  <Badge variant="default" className="bg-green-500/20 text-green-300 border-green-400/30 [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)]">
+                  <Badge variant="default" className="bg-green-500/20 text-green-500 border-green-500/30">
                     Active
                   </Badge>
                 ) : (
-                  <Badge variant="secondary" className="bg-gray-500/20 text-gray-300 border-gray-400/30 [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)]">
+                  <Badge variant="secondary" className="bg-foreground/10 text-foreground/60 border-foreground/20">
                     Inactive
                   </Badge>
                 )}
@@ -108,35 +107,35 @@ export function ApiKeysList({ apiKeys }: { apiKeys: ApiKey[] }) {
 
               <div className="mt-3 space-y-2">
                 <div className="flex items-center gap-2 font-mono text-sm">
-                  <span className="text-gray-300 [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)]">
+                  <span className="text-foreground/80">
                     {key.key_prefix}{'*'.repeat(24)}
                   </span>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleCopy(key.key_prefix)}
-                    className="text-gray-300 hover:text-white hover:bg-white/10 transition-all"
+                    className="text-foreground/60 hover:text-foreground hover:bg-foreground/10 transition-colors"
                   >
                     <Copy className="w-4 h-4" />
                   </Button>
                 </div>
 
                 <div className="flex flex-wrap gap-3 text-sm">
-                  <span className="text-gray-400 [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)] font-open-sans-custom">
-                    RPM: <span className="font-medium text-white">{key.rate_limit_rpm}</span>
+                  <span className="text-foreground/60 font-mono">
+                    RPM: <span className="font-medium text-foreground">{key.rate_limit_rpm}</span>
                   </span>
-                  <span className="text-gray-400 [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)] font-open-sans-custom">
-                    TPM: <span className="font-medium text-white">{key.rate_limit_tpm.toLocaleString()}</span>
+                  <span className="text-foreground/60 font-mono">
+                    TPM: <span className="font-medium text-foreground">{key.rate_limit_tpm.toLocaleString()}</span>
                   </span>
-                  <span className="text-gray-400 [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)] font-open-sans-custom">
-                    Daily: <span className="font-medium text-white">{key.quota_daily.toLocaleString()}</span>
+                  <span className="text-foreground/60 font-mono">
+                    Daily: <span className="font-medium text-foreground">{key.quota_daily.toLocaleString()}</span>
                   </span>
-                  <span className="text-gray-400 [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)] font-open-sans-custom">
-                    Monthly: <span className="font-medium text-white">{key.quota_monthly.toLocaleString()}</span>
+                  <span className="text-foreground/60 font-mono">
+                    Monthly: <span className="font-medium text-foreground">{key.quota_monthly.toLocaleString()}</span>
                   </span>
                 </div>
 
-                <div className="text-xs text-gray-500 [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)] font-open-sans-custom">
+                <div className="text-xs text-foreground/60 font-mono">
                   Created {new Date(key.created_at).toLocaleDateString()}
                   {key.last_used_at && (
                     <span> · Last used {new Date(key.last_used_at).toLocaleDateString()}</span>
@@ -147,15 +146,15 @@ export function ApiKeysList({ apiKeys }: { apiKeys: ApiKey[] }) {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-gray-300 hover:text-white hover:bg-white/10 transition-all">
+                <Button variant="ghost" size="icon" className="text-foreground/60 hover:text-foreground hover:bg-foreground/10 transition-colors">
                   <MoreVertical className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-gray-900/95 backdrop-blur-xl border-white/10">
+              <DropdownMenuContent align="end" className="bg-background border-foreground/10">
                 <DropdownMenuItem
                   onClick={() => handleRotate(key.id)}
                   disabled={rotatingId === key.id}
-                  className="text-gray-300 hover:text-white hover:bg-white/10 focus:bg-white/10 focus:text-white"
+                  className="text-foreground hover:text-foreground hover:bg-foreground/10 focus:bg-foreground/10"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Rotate Key
@@ -163,7 +162,7 @@ export function ApiKeysList({ apiKeys }: { apiKeys: ApiKey[] }) {
                 <DropdownMenuItem
                   onClick={() => handleRevoke(key.id)}
                   disabled={revokingId === key.id}
-                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10 focus:bg-red-500/10 focus:text-red-300"
+                  className="text-red-500 hover:text-red-400 hover:bg-red-500/10 focus:bg-red-500/10"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Revoke
@@ -178,15 +177,12 @@ export function ApiKeysList({ apiKeys }: { apiKeys: ApiKey[] }) {
               <Badge
                 key={scope}
                 variant="outline"
-                className="bg-white/5 text-gray-300 border-white/20 [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)] font-open-sans-custom"
+                className="bg-foreground/5 text-foreground/80 border-foreground/20 font-mono"
               >
                 {scope}
               </Badge>
             ))}
           </div>
-
-          {/* Subtle gradient overlay on hover */}
-          <div className="absolute inset-0 bg-gradient-to-br from-white/0 to-white/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
         </div>
       ))}
     </div>

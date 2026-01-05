@@ -15,7 +15,7 @@ const plans = [
     name: 'Starter',
     price: 29,
     features: [
-      '500K tokens/month',
+      '50,000 requests/month',
       '60 requests/minute',
       '5 API keys',
       'Email support',
@@ -27,7 +27,7 @@ const plans = [
     name: 'Pro',
     price: 99,
     features: [
-      '2M tokens/month',
+      '200,000 requests/month',
       '200 requests/minute',
       '20 API keys',
       'Priority support',
@@ -42,7 +42,7 @@ const plans = [
     name: 'Enterprise',
     price: 499,
     features: [
-      '10M tokens/month',
+      '1,000,000 requests/month',
       '1000 requests/minute',
       '100 API keys',
       '24/7 support',

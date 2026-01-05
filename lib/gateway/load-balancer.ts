@@ -4,49 +4,172 @@
 
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { logger } from '@/lib/utils/logger'
-import { ServiceUnavailableError } from '@/lib/utils/errors'
+import { ServiceUnavailableError, NotFoundError } from '@/lib/utils/errors'
 import type { LiteLLMServer, ServerSelection } from '@/lib/types'
+
+// Custom model mapping type
+export interface CustomModelMapping {
+  customName: string
+  actualModelName: string
+  providerId: string
+  displayName: string | null
+  description: string | null
+  priority: number
+  weight: number
+}
+
+// Resolve custom model mappings (returns all provider mappings for a model)
+export async function resolveCustomModel(customName: string): Promise<CustomModelMapping[]> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('custom_models')
+      .select('custom_name, actual_model_name, provider_id, display_name, description, priority, weight')
+      .eq('custom_name', customName)
+      .eq('is_active', true)
+      .order('priority', { ascending: true })
+      .order('weight', { ascending: false })
+
+    if (error || !data || data.length === 0) {
+      return []
+    }
+
+    return data.map(mapping => ({
+      customName: mapping.custom_name,
+      actualModelName: mapping.actual_model_name,
+      providerId: mapping.provider_id,
+      displayName: mapping.display_name,
+      description: mapping.description,
+      priority: mapping.priority || 100,
+      weight: mapping.weight || 1.0,
+    }))
+  } catch (error) {
+    logger.warn('Failed to resolve custom model', { customName, error })
+    return []
+  }
+}
 
 // Select a healthy LiteLLM server for routing
 export async function selectServer(model?: string): Promise<ServerSelection> {
   try {
-    // Get all active servers
-    let query = supabaseAdmin
-      .from('litellm_servers')
-      .select('*')
-      .eq('is_active', true)
-      .neq('health_status', 'unhealthy')
-      .order('priority', { ascending: true })
-      .order('weight', { ascending: false })
+    let actualModel = model
+    let customMappings: CustomModelMapping[] = []
+    let isCustomModel = false
 
-    // Filter by model support if specified
+    // Check if this is a custom model mapping
     if (model) {
-      query = query.contains('supported_models', [model])
+      customMappings = await resolveCustomModel(model)
+      if (customMappings.length > 0) {
+        isCustomModel = true
+
+        logger.gateway('Custom model resolved with multiple providers', {
+          customName: model,
+          providerCount: customMappings.length,
+          providers: customMappings.map(m => ({
+            providerId: m.providerId,
+            actualModel: m.actualModelName,
+            priority: m.priority,
+            weight: m.weight,
+          })),
+        })
+      }
     }
 
-    const { data: servers, error } = await query
+    let servers: LiteLLMServer[] = []
 
-    if (error) {
-      logger.error('Failed to fetch servers', error)
-      throw new ServiceUnavailableError('Failed to fetch available servers')
+    // If we have custom model mappings, fetch servers for all mapped providers
+    if (customMappings.length > 0) {
+      const providerIds = customMappings.map(m => m.providerId)
+
+      const { data, error } = await supabaseAdmin
+        .from('litellm_servers')
+        .select('*')
+        .in('id', providerIds)
+        .eq('is_active', true)
+        .neq('health_status', 'unhealthy')
+
+      if (error) {
+        logger.error('Failed to fetch servers for custom model', error)
+        throw new ServiceUnavailableError('Failed to fetch available servers')
+      }
+
+      servers = (data || []) as LiteLLMServer[]
+
+      // Enrich servers with custom model mapping info (priority, weight, actual model)
+      servers = servers.map(server => {
+        const mapping = customMappings.find(m => m.providerId === server.id)
+        return {
+          ...server,
+          // Use custom model priority/weight if available, otherwise use server defaults
+          priority: mapping?.priority || server.priority,
+          weight: mapping?.weight || server.weight,
+          _actualModel: mapping?.actualModelName, // Store actual model name
+        } as LiteLLMServer & { _actualModel?: string }
+      })
+
+      // If we have the actual model name from mapping, use it
+      if (customMappings[0]?.actualModelName) {
+        actualModel = customMappings[0].actualModelName
+      }
+    } else {
+      // No custom mapping - use traditional server selection
+      let query = supabaseAdmin
+        .from('litellm_servers')
+        .select('*')
+        .eq('is_active', true)
+        .neq('health_status', 'unhealthy')
+        .order('priority', { ascending: true })
+        .order('weight', { ascending: false })
+
+      if (actualModel) {
+        // Try to filter by model support if specified
+        query = query.contains('supported_models', [actualModel])
+      }
+
+      const { data, error } = await query
+
+      if (error) {
+        logger.error('Failed to fetch servers', error)
+        throw new ServiceUnavailableError('Failed to fetch available servers')
+      }
+
+      servers = (data || []) as LiteLLMServer[]
     }
 
+    // Strict mode: Only allow mapped models or models explicitly in supported_models
     if (!servers || servers.length === 0) {
-      throw new ServiceUnavailableError('No healthy servers available')
+      if (isCustomModel) {
+        throw new ServiceUnavailableError(`Model "${model}" is configured but no healthy providers are available`)
+      }
+      if (model && !isCustomModel) {
+        throw new ServiceUnavailableError(`Model "${model}" is not available. Please use a mapped model name from /v1/models endpoint.`)
+      }
+      throw new ServiceUnavailableError(`No servers available for model "${model}"`)
     }
 
     // Select server using weighted round-robin with priority
-    const server = selectByWeightedRoundRobin(servers as LiteLLMServer[])
+    const selectedServer = selectByWeightedRoundRobin(servers)
+
+    // Get the actual model for this specific server if available
+    const serverWithModel = selectedServer as LiteLLMServer & { _actualModel?: string }
+    if (serverWithModel._actualModel) {
+      actualModel = serverWithModel._actualModel
+    }
 
     logger.gateway('Server selected', {
-      serverId: server.id,
-      serverName: server.name,
-      model,
+      serverId: selectedServer.id,
+      serverName: selectedServer.name,
+      requestedModel: model,
+      actualModel,
+      isCustomModel,
+      availableProviders: servers.length,
+      serverPriority: selectedServer.priority,
+      serverWeight: selectedServer.weight,
     })
 
     return {
-      server,
-      reason: 'round_robin',
+      server: selectedServer,
+      reason: customMappings.length > 1 ? 'multi_provider_rotation' : 'round_robin',
+      actualModel, // Return the actual model to use in the request
     }
   } catch (error) {
     if (error instanceof ServiceUnavailableError) {

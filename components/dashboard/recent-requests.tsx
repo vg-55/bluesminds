@@ -17,6 +17,7 @@ interface RequestLog {
   id: string
   model: string
   total_tokens: number
+  cost_usd: number
   response_time_ms: number
   status_code: number
   is_error: boolean
@@ -40,27 +41,27 @@ export function RecentRequests({ userId }: RecentRequestsProps) {
   }, [userId])
 
   return (
-    <div className="bg-slate-900/50 backdrop-blur-xl border border-white/5 rounded-xl p-6 hover:border-white/10 transition-colors">
-      <h3 className="text-base font-medium text-white font-open-sans-custom mb-4">
+    <div className="bg-foreground/[0.02] backdrop-blur-xl border border-foreground/10 rounded-xl p-6 hover:border-foreground/20 transition-colors">
+      <h3 className="text-base font-medium text-foreground font-mono mb-4">
         Recent Requests
       </h3>
 
       {loading ? (
         <div className="space-y-2">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-14 bg-white/5 border border-white/5 rounded-lg animate-pulse" />
+            <div key={i} className="h-14 bg-foreground/5 border border-foreground/5 rounded-lg animate-pulse" />
           ))}
         </div>
       ) : logs.length === 0 ? (
         <div className="h-64 flex items-center justify-center">
-          <p className="text-sm text-gray-500 font-open-sans-custom">No requests yet</p>
+          <p className="text-sm text-foreground/60 font-mono">No requests yet</p>
         </div>
       ) : (
         <div className="space-y-2">
           {logs.map((log) => (
             <div
               key={log.id}
-              className="flex items-center justify-between p-3 bg-white/5 backdrop-blur-sm border border-white/5 rounded-lg hover:border-white/10 transition-colors"
+              className="flex items-center justify-between p-3 bg-foreground/5 backdrop-blur-sm border border-foreground/5 rounded-lg hover:border-foreground/10 transition-colors"
             >
               <div className="flex items-center gap-3">
                 {log.is_error ? (
@@ -70,20 +71,23 @@ export function RecentRequests({ userId }: RecentRequestsProps) {
                 )}
 
                 <div>
-                  <p className="text-sm font-medium text-white font-open-sans-custom">
+                  <p className="text-sm font-medium text-foreground font-mono">
                     {log.model}
                   </p>
-                  <p className="text-xs text-gray-500 font-open-sans-custom">
+                  <p className="text-xs text-foreground/60 font-mono">
                     {new Date(log.created_at).toLocaleString()}
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-white/5 text-gray-400 border-white/10 text-xs font-open-sans-custom">
-                  {log.total_tokens}
+                <Badge variant="outline" className="bg-foreground/5 text-foreground/60 border-foreground/10 text-xs font-mono">
+                  {log.total_tokens} tokens
                 </Badge>
-                <Badge variant="outline" className="bg-white/5 text-gray-400 border-white/10 text-xs font-open-sans-custom">
+                <Badge variant="outline" className="bg-foreground/5 text-foreground/60 border-foreground/10 text-xs font-mono">
+                  ${log.cost_usd?.toFixed(4) || '0.0000'}
+                </Badge>
+                <Badge variant="outline" className="bg-foreground/5 text-foreground/60 border-foreground/10 text-xs font-mono">
                   {log.response_time_ms}ms
                 </Badge>
               </div>

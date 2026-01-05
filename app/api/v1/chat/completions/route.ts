@@ -9,7 +9,7 @@ import { selectServer, incrementServerRequests, decrementServerRequests, recordS
 import { proxyRequest, extractModelFromRequest, extractProviderFromModel, isErrorResponse, extractErrorMessage, extractUsageFromResponse, retryRequest } from '@/lib/gateway/proxy'
 import { logUsage } from '@/lib/gateway/usage-tracker'
 import { chatCompletionRequestSchema } from '@/lib/validations'
-import { errorResponse, successResponse, ValidationError } from '@/lib/utils/errors'
+import { errorResponse, ValidationError } from '@/lib/utils/errors'
 import { logger } from '@/lib/utils/logger'
 
 export const runtime = 'nodejs' // Use Node.js runtime for better streaming support
@@ -30,27 +30,39 @@ export async function POST(request: NextRequest) {
     const validated = chatCompletionRequestSchema.safeParse(body)
 
     if (!validated.success) {
-      throw new ValidationError('Invalid request', validated.error.errors)
+      const validationErrors = validated.error.errors.map(err => ({
+        field: err.path.join('.'),
+        message: err.message,
+        code: err.code,
+      }))
+
+      logger.error('Request validation failed', {
+        body,
+        errors: validationErrors,
+      })
+
+      throw new ValidationError('Invalid request: ' + validationErrors.map(e => `${e.field}: ${e.message}`).join(', '), validationErrors)
     }
 
     const requestData = validated.data
-    const model = requestData.model
+    const requestedModel = requestData.model
     const isStreaming = requestData.stream || false
 
-    // 3. ESTIMATE TOKENS FOR RATE LIMITING
-    const estimatedTokens = estimateChatTokens(requestData.messages)
+    // 3. CHECK RATE LIMITS - SIMPLIFIED (RPM only, no token estimation needed)
+    await checkRateLimits(authContext.apiKey, 0)
 
-    // 4. CHECK RATE LIMITS
-    await checkRateLimits(authContext.apiKey, estimatedTokens)
-
-    // 5. SELECT SERVER
-    const serverSelection = await selectServer(model)
+    // 4. SELECT SERVER (this also resolves custom model mappings)
+    const serverSelection = await selectServer(requestedModel)
     serverId = serverSelection.server.id
+
+    // Use the actual model name if this is a custom model, otherwise use the requested model
+    const actualModel = serverSelection.actualModel || requestedModel
 
     logger.gateway('Request received', {
       userId: authContext.user.id,
       apiKeyId: authContext.apiKey.id,
-      model,
+      requestedModel,
+      actualModel,
       serverId,
       isStreaming,
     })
@@ -58,7 +70,7 @@ export async function POST(request: NextRequest) {
     // 6. INCREMENT SERVER REQUEST COUNTER
     await incrementServerRequests(serverId)
 
-    // 7. PROXY REQUEST TO LITELLM
+    // 7. PROXY REQUEST TO LITELLM with actual model name
     const proxyResponse = await retryRequest(async () => {
       return proxyRequest(serverSelection.server, {
         method: 'POST',
@@ -66,7 +78,10 @@ export async function POST(request: NextRequest) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: requestData,
+        body: {
+          ...requestData,
+          model: actualModel, // Use the actual model name for the provider
+        },
         stream: isStreaming,
       })
     })
@@ -76,12 +91,14 @@ export async function POST(request: NextRequest) {
 
     // 8. HANDLE STREAMING RESPONSES
     if (isStreaming && proxyResponse.stream) {
-      // For streaming, we return immediately and log usage later
-      // Note: Token counting for streaming is approximate
+      // For streaming, we estimate tokens for analytics/logging only (not rate limiting)
+      const estimatedTokens = estimateChatTokens(requestData.messages)
+
+      // Log usage async (cost calculated per-request, not per-token)
       logUsageAsync(
         authContext,
         serverId,
-        model,
+        requestedModel, // Log the model name the user requested
         estimatedTokens,
         responseTimeMs,
         proxyResponse.status,
@@ -113,8 +130,8 @@ export async function POST(request: NextRequest) {
       apiKeyId: authContext.apiKey.id,
       serverId,
       endpoint: '/v1/chat/completions',
-      model,
-      provider: extractProviderFromModel(model),
+      model: requestedModel, // Log the model name the user requested
+      provider: extractProviderFromModel(actualModel), // But extract provider from actual model
       promptTokens: usage?.promptTokens || 0,
       completionTokens: usage?.completionTokens || 0,
       totalTokens: usage?.totalTokens || 0,
@@ -131,14 +148,11 @@ export async function POST(request: NextRequest) {
     await decrementServerRequests(serverId)
 
     // 13. RETURN RESPONSE
-    if (isError) {
-      return new Response(JSON.stringify(proxyResponse.body), {
-        status: proxyResponse.status,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-
-    return successResponse(proxyResponse.body, proxyResponse.status)
+    // Return raw response for OpenAI compatibility (no wrapper)
+    return new Response(JSON.stringify(proxyResponse.body), {
+      status: proxyResponse.status,
+      headers: { 'Content-Type': 'application/json' },
+    })
   } catch (error) {
     // Cleanup server counter on error
     if (serverId) {
@@ -157,7 +171,7 @@ export async function POST(request: NextRequest) {
 async function logUsageAsync(
   authContext: Awaited<ReturnType<typeof withAuth>>,
   serverId: string,
-  model: string,
+  requestedModel: string,
   estimatedTokens: number,
   responseTimeMs: number,
   statusCode: number,
@@ -169,8 +183,8 @@ async function logUsageAsync(
       apiKeyId: authContext.apiKey.id,
       serverId,
       endpoint: '/v1/chat/completions',
-      model,
-      provider: extractProviderFromModel(model),
+      model: requestedModel,
+      provider: extractProviderFromModel(requestedModel),
       promptTokens: Math.floor(estimatedTokens * 0.7), // Rough estimate
       completionTokens: Math.floor(estimatedTokens * 0.3),
       totalTokens: estimatedTokens,

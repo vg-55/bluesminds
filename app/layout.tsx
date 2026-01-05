@@ -10,7 +10,6 @@ import { Open_Sans, Rubik, Instrument_Serif, Geist as V0_Font_Geist, Geist_Mono 
 
 // Initialize fonts
 const _geist = V0_Font_Geist({ subsets: ['latin'], weight: ["100","200","300","400","500","600","700","800","900"] })
-const _geistMono = V0_Font_Geist_Mono({ subsets: ['latin'], weight: ["100","200","300","400","500","600","700","800","900"] })
 const _sourceSerif_4 = V0_Font_Source_Serif_4({ subsets: ['latin'], weight: ["200","300","400","500","600","700","800","900"] })
 
 const openSans = Open_Sans({
@@ -35,6 +34,13 @@ const instrumentSerif = Instrument_Serif({
   display: "swap",
 })
 
+const geistMono = V0_Font_Geist_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-geist-mono",
+  display: "swap",
+})
+
 export const metadata: Metadata = {
   title: "v0 App",
   description: "Created with v0",
@@ -52,7 +58,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`font-sans ${openSans.variable} ${rubik.variable} ${instrumentSerif.variable}`}>
+      <body className={`font-sans ${openSans.variable} ${rubik.variable} ${instrumentSerif.variable} ${geistMono.variable}`}>
         <Providers>
           <Suspense fallback={null}>
             {children}

@@ -4,7 +4,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { logger } from '@/lib/utils/logger'
-import { calculateCost } from '@/lib/config/app'
+import { calculateCostByRequest } from '@/lib/config/app'
 import { generateRequestId } from '@/lib/utils/crypto'
 import type { UsageLogInsert } from '@/lib/types'
 
@@ -30,7 +30,9 @@ export interface UsageData {
 export async function logUsage(data: UsageData): Promise<string> {
   try {
     const requestId = generateRequestId()
-    const cost = calculateCost(data.model, data.promptTokens, data.completionTokens)
+
+    // NEW: Calculate cost per request (not per token) for billing
+    const cost = calculateCostByRequest(data.model)
 
     const usageLog: UsageLogInsert = {
       user_id: data.userId,
@@ -40,9 +42,11 @@ export async function logUsage(data: UsageData): Promise<string> {
       endpoint: data.endpoint,
       model: data.model,
       provider: data.provider || null,
+      // KEEP: Token fields for analytics (not used for billing)
       prompt_tokens: data.promptTokens,
       completion_tokens: data.completionTokens,
       total_tokens: data.totalTokens,
+      // NEW: Cost is per-request, not token-based
       cost_usd: cost,
       response_time_ms: data.responseTimeMs,
       status_code: data.statusCode,
@@ -71,7 +75,8 @@ export async function logUsageBatch(records: UsageData[]): Promise<void> {
   try {
     const usageLogs: UsageLogInsert[] = records.map((data) => {
       const requestId = generateRequestId()
-      const cost = calculateCost(data.model, data.promptTokens, data.completionTokens)
+      // NEW: Calculate cost per request (not per token)
+      const cost = calculateCostByRequest(data.model)
 
       return {
         user_id: data.userId,
@@ -81,9 +86,11 @@ export async function logUsageBatch(records: UsageData[]): Promise<void> {
         endpoint: data.endpoint,
         model: data.model,
         provider: data.provider || null,
+        // KEEP: Token fields for analytics
         prompt_tokens: data.promptTokens,
         completion_tokens: data.completionTokens,
         total_tokens: data.totalTokens,
+        // NEW: Cost is per-request
         cost_usd: cost,
         response_time_ms: data.responseTimeMs,
         status_code: data.statusCode,
@@ -324,6 +331,7 @@ export async function getRecentUsageLogs(
   total: number
   page: number
   per_page: number
+  has_more: boolean
 }> {
   try {
     const offset = (page - 1) * perPage
@@ -349,11 +357,15 @@ export async function getRecentUsageLogs(
       throw new Error('Failed to get usage logs')
     }
 
+    const totalCount = count || 0
+    const hasMore = offset + perPage < totalCount
+
     return {
       logs: data || [],
-      total: count || 0,
+      total: totalCount,
       page,
       per_page: perPage,
+      has_more: hasMore,
     }
   } catch (error) {
     logger.error('Get recent usage logs error', error)

@@ -4,7 +4,6 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { createBrowserClient as createBrowserClientSSR, createServerClient as createServerClientSSR } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import type { Database } from '@/lib/types/database.types'
 
 // Check if we're on the server
@@ -42,6 +41,7 @@ export function createBrowserClient() {
 
 // Server-side Supabase client (for use in Server Components, API routes)
 export async function createServerClient() {
+  const { cookies } = await import('next/headers')
   const cookieStore = await cookies()
 
   return createServerClientSSR<Database>(

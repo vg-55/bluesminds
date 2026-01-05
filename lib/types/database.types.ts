@@ -23,6 +23,7 @@ export interface Database {
           company_name: string | null
           tier: 'free' | 'starter' | 'pro' | 'enterprise'
           status: 'active' | 'suspended' | 'deleted'
+          role: 'user' | 'admin'
           referral_code: string | null
           referred_by: string | null
           credits_balance: number
@@ -36,6 +37,7 @@ export interface Database {
           company_name?: string | null
           tier?: 'free' | 'starter' | 'pro' | 'enterprise'
           status?: 'active' | 'suspended' | 'deleted'
+          role?: 'user' | 'admin'
           referral_code?: string | null
           referred_by?: string | null
           credits_balance?: number
@@ -49,6 +51,7 @@ export interface Database {
           company_name?: string | null
           tier?: 'free' | 'starter' | 'pro' | 'enterprise'
           status?: 'active' | 'suspended' | 'deleted'
+          role?: 'user' | 'admin'
           referral_code?: string | null
           referred_by?: string | null
           credits_balance?: number
@@ -170,6 +173,47 @@ export interface Database {
           supported_models?: string[]
           is_active?: boolean
           metadata?: Json
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      custom_models: {
+        Row: {
+          id: string
+          custom_name: string
+          provider_id: string
+          actual_model_name: string
+          display_name: string | null
+          description: string | null
+          priority: number
+          weight: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          custom_name: string
+          provider_id: string
+          actual_model_name: string
+          display_name?: string | null
+          description?: string | null
+          priority?: number
+          weight?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          custom_name?: string
+          provider_id?: string
+          actual_model_name?: string
+          display_name?: string | null
+          description?: string | null
+          priority?: number
+          weight?: number
+          is_active?: boolean
           created_at?: string
           updated_at?: string
         }

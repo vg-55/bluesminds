@@ -31,8 +31,14 @@ export async function proxyRequest(
   const startTime = Date.now()
 
   try {
-    // Build target URL
-    const targetUrl = new URL(request.path, server.base_url)
+    // Build target URL - normalize base URL to avoid double slashes
+    const baseUrl = server.base_url.endsWith('/')
+      ? server.base_url.slice(0, -1)
+      : server.base_url
+    const path = request.path.startsWith('/')
+      ? request.path
+      : `/${request.path}`
+    const targetUrl = new URL(path, baseUrl)
 
     // Prepare headers
     const headers = new Headers()
@@ -69,6 +75,7 @@ export async function proxyRequest(
     // Make the request
     logger.gateway('Proxying request to LiteLLM', {
       server: server.name,
+      url: targetUrl.toString(),
       path: request.path,
       method: request.method,
     })
@@ -90,11 +97,90 @@ export async function proxyRequest(
     // Handle non-streaming responses
     const contentType = response.headers.get('content-type') || ''
     let body: unknown
+    let responseText = ''
 
-    if (contentType.includes('application/json')) {
-      body = await response.json()
-    } else {
-      body = await response.text()
+    try {
+      // First, get the response text
+      responseText = await response.text()
+
+      // Check if response is empty
+      if (!responseText || responseText.trim() === '') {
+        logger.error('Empty response from LiteLLM server', {
+          server: server.name,
+          url: targetUrl.toString(),
+          status: response.status,
+          contentType,
+          headers: Object.fromEntries(response.headers.entries()),
+        })
+
+        throw new GatewayError(
+          `Empty response from LiteLLM server "${server.name}" at ${server.base_url}. ` +
+          `Please verify the server is running and properly configured.`,
+          response.status >= 400 ? response.status : 502
+        )
+      }
+
+      // Parse based on content type
+      if (contentType.includes('application/json')) {
+        try {
+          body = JSON.parse(responseText)
+        } catch (parseError) {
+          logger.error('Invalid JSON response from LiteLLM server', {
+            server: server.name,
+            url: targetUrl.toString(),
+            status: response.status,
+            contentType,
+            responsePreview: responseText.substring(0, 200),
+            error: parseError,
+          })
+
+          throw new GatewayError(
+            `Invalid JSON response from LiteLLM server "${server.name}". ` +
+            `Server returned: ${responseText.substring(0, 100)}... ` +
+            `Please verify the server is running correctly at ${server.base_url}`,
+            response.status >= 400 ? response.status : 502
+          )
+        }
+      } else if (contentType.includes('text/html')) {
+        // HTML response usually means wrong endpoint or error page
+        logger.error('HTML response from LiteLLM server (expected JSON)', {
+          server: server.name,
+          url: targetUrl.toString(),
+          status: response.status,
+          contentType,
+          responsePreview: responseText.substring(0, 200),
+        })
+
+        throw new GatewayError(
+          `LiteLLM server "${server.name}" returned HTML instead of JSON. ` +
+          `This usually means the endpoint is incorrect or the server is misconfigured. ` +
+          `URL: ${targetUrl.toString()}`,
+          response.status >= 400 ? response.status : 502
+        )
+      } else {
+        body = responseText
+      }
+    } catch (error) {
+      // Re-throw GatewayErrors as-is
+      if (error instanceof GatewayError) {
+        throw error
+      }
+
+      // Handle other errors
+      logger.error('Failed to parse LiteLLM response', {
+        server: server.name,
+        url: targetUrl.toString(),
+        status: response.status,
+        contentType,
+        responsePreview: responseText.substring(0, 200),
+        error,
+      })
+
+      throw new GatewayError(
+        `Failed to process response from LiteLLM server "${server.name}". ` +
+        `Please verify the server is accessible at ${server.base_url}`,
+        response.status || 502
+      )
     }
 
     return {

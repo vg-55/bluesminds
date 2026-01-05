@@ -30,7 +30,7 @@ export function DashboardHeader({ user }: { user: UserType }) {
   }
 
   return (
-    <header className="bg-slate-900/30 dark:bg-slate-900/30 bg-white/80 backdrop-blur-xl border-b border-white/5 dark:border-white/5 border-slate-200">
+    <header className="ml-64 bg-foreground/[0.02] backdrop-blur-2xl border-b border-foreground/10 sticky top-0 z-30">
       <div className="flex items-center justify-between px-8 py-4">
         <div className="flex items-center gap-3">
           <Image
@@ -40,7 +40,7 @@ export function DashboardHeader({ user }: { user: UserType }) {
             height={28}
             className="object-contain"
           />
-          <h1 className="text-lg font-medium text-white dark:text-white text-slate-900 font-open-sans-custom">
+          <h1 className="text-lg font-medium text-foreground">
             Dashboard
           </h1>
         </div>
@@ -49,9 +49,9 @@ export function DashboardHeader({ user }: { user: UserType }) {
           {/* Theme Toggle */}
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-sm"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="text-gray-400 dark:text-gray-400 text-slate-600 hover:text-white dark:hover:text-white hover:text-slate-900 hover:bg-white/5 dark:hover:bg-white/5 hover:bg-slate-900/5 transition-colors"
+            className="text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition-all duration-300"
           >
             {theme === 'dark' ? (
               <Sun className="w-4 h-4" />
@@ -61,22 +61,22 @@ export function DashboardHeader({ user }: { user: UserType }) {
           </Button>
 
           {/* User Menu */}
-          <div className="flex items-center gap-3 bg-white/5 dark:bg-white/5 bg-slate-900/5 backdrop-blur-sm border border-white/10 dark:border-white/10 border-slate-200 rounded-lg px-3 py-2">
+          <div className="flex items-center gap-3 bg-foreground/[0.02] backdrop-blur-xl border border-foreground/10 rounded-lg px-4 py-2 hover:border-foreground/20 transition-all duration-300">
             <div className="text-right">
-              <p className="text-sm font-medium text-white dark:text-white text-slate-900 font-open-sans-custom">
+              <p className="text-sm font-medium text-foreground">
                 {user.full_name || 'User'}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-500 text-slate-600 font-open-sans-custom">
+              <p className="text-xs text-foreground/60">
                 {user.email}
               </p>
             </div>
 
             <Button
               variant="ghost"
-              size="icon"
+              size="icon-sm"
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className="text-gray-400 dark:text-gray-400 text-slate-600 hover:text-white dark:hover:text-white hover:text-slate-900 hover:bg-white/5 dark:hover:bg-white/5 hover:bg-slate-900/5 transition-colors h-8 w-8"
+              className="text-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-all duration-300"
             >
               <LogOut className="w-4 h-4" />
             </Button>

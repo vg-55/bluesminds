@@ -10,10 +10,9 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
   Key,
-  BarChart3,
-  FileText,
   CreditCard,
   Settings,
+  BookOpen,
   Server,
   Users,
 } from 'lucide-react'
@@ -37,16 +36,6 @@ const navItems: NavItem[] = [
     icon: Key,
   },
   {
-    name: 'Usage',
-    href: '/dashboard/usage',
-    icon: BarChart3,
-  },
-  {
-    name: 'Logs',
-    href: '/dashboard/logs',
-    icon: FileText,
-  },
-  {
     name: 'Billing',
     href: '/dashboard/billing',
     icon: CreditCard,
@@ -55,6 +44,11 @@ const navItems: NavItem[] = [
     name: 'Settings',
     href: '/dashboard/settings',
     icon: Settings,
+  },
+  {
+    name: 'Documentation',
+    href: '/docs',
+    icon: BookOpen,
   },
   {
     name: 'Servers',
@@ -82,8 +76,8 @@ export function DashboardNav({
   const pathname = usePathname()
 
   return (
-    <nav className="w-72 bg-slate-900/50 dark:bg-slate-900/50 bg-white/80 backdrop-blur-xl border-r border-white/5 dark:border-white/5 border-slate-200 min-h-screen relative">
-      <div className="px-3 py-6 space-y-1">
+    <nav className="fixed top-0 left-0 z-40 h-screen w-64 bg-foreground/[0.02] backdrop-blur-2xl border-r border-foreground/10 flex flex-col">
+      <div className="flex-1 px-4 py-6 space-y-2">
         {navItems.map((item) => {
           // Hide admin items for non-admins
           if (item.adminOnly && !isAdmin) return null
@@ -96,10 +90,10 @@ export function DashboardNav({
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors font-open-sans-custom',
+                'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium font-mono transition-all duration-300',
                 isActive
-                  ? 'bg-white/10 dark:bg-white/10 bg-slate-900/5 text-white dark:text-white text-slate-900'
-                  : 'text-gray-400 dark:text-gray-400 text-slate-600 hover:bg-white/5 dark:hover:bg-white/5 hover:bg-slate-900/5 hover:text-gray-200 dark:hover:text-gray-200 hover:text-slate-900'
+                  ? 'bg-primary/10 text-primary border border-primary/30 shadow-sm'
+                  : 'text-foreground/60 hover:text-foreground hover:bg-foreground/5 hover:border-foreground/10 border border-transparent'
               )}
             >
               <Icon className="w-5 h-5" />
@@ -110,18 +104,18 @@ export function DashboardNav({
       </div>
 
       {/* Tier Badge */}
-      <div className="absolute bottom-6 left-4 right-4">
-        <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 backdrop-blur-sm rounded-lg p-4 border border-white/10 dark:border-white/10 border-slate-200">
-          <p className="text-xs font-medium text-gray-400 dark:text-gray-400 text-slate-600 uppercase tracking-wider font-open-sans-custom">
+      <div className="p-4 border-t border-foreground/10">
+        <div className="bg-gradient-to-br from-primary/10 to-accent/10 backdrop-blur-md rounded-xl p-4 border border-foreground/10 hover:border-primary/30 transition-all duration-300">
+          <p className="text-xs font-medium text-foreground/60 uppercase tracking-wider font-mono">
             Current Plan
           </p>
-          <p className="text-xl font-semibold text-white dark:text-white text-slate-900 capitalize mt-1 font-open-sans-custom">
+          <p className="text-xl font-semibold text-foreground capitalize mt-1 font-mono">
             {userTier}
           </p>
           {userTier === 'free' && (
             <Link
               href="/dashboard/billing"
-              className="inline-flex items-center gap-1 text-xs font-medium mt-3 px-3 py-1.5 bg-white/10 dark:bg-white/10 bg-slate-900/10 hover:bg-white/20 dark:hover:bg-white/20 hover:bg-slate-900/20 rounded-md transition-colors font-open-sans-custom text-white dark:text-white text-slate-900"
+              className="inline-flex items-center gap-1 text-xs font-medium font-mono mt-3 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 border border-primary/30 hover:border-primary/50 rounded-lg transition-all duration-300 text-primary"
             >
               Upgrade →
             </Link>

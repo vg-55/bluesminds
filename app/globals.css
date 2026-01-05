@@ -81,6 +81,7 @@
   --font-sans: var(--font-open-sans);
   --font-heading: var(--font-rubik);
   --font-serif: var(--font-instrument);
+  --font-mono: var(--font-geist-mono);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -122,16 +123,33 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    transition: background-color 200ms ease-in-out, color 200ms ease-in-out, border-color 200ms ease-in-out, opacity 200ms ease-in-out;
   }
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Font for admin panel style headers */
+  .font-sentient {
+    font-family: var(--font-instrument), serif;
+    font-style: normal;
+  }
+
+  .font-sentient i,
+  .font-sentient .font-light {
+    font-style: italic;
+    font-weight: 300;
+  }
+
+  /* Removed font-open-sans-custom - forces weight 700 which conflicts with semantic design */
+  /*
   .font-open-sans-custom {
     font-family: "Open Sans", sans-serif;
     font-optical-sizing: auto;
     font-weight: 700;
     font-variation-settings: "wdth" 100;
   }
+  */
 }
 
 /* Added infinite scroll animation for text carousel */

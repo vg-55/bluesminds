@@ -37,41 +37,41 @@ export function UsageChart({ userId }: UsageChartProps) {
   }, [userId])
 
   return (
-    <div className="bg-slate-900/50 backdrop-blur-xl border border-white/5 rounded-xl p-6 hover:border-white/10 transition-colors">
-      <h3 className="text-base font-medium text-white font-open-sans-custom mb-4">
+    <div className="bg-foreground/[0.02] backdrop-blur-xl border border-foreground/10 rounded-xl p-6 hover:border-foreground/20 transition-colors">
+      <h3 className="text-base font-medium text-foreground font-mono mb-4">
         Daily Requests
       </h3>
 
       {loading ? (
         <div className="h-64 flex items-center justify-center">
-          <p className="text-sm text-gray-500 font-open-sans-custom">Loading...</p>
+          <p className="text-sm text-foreground/60 font-mono">Loading...</p>
         </div>
       ) : data.length === 0 ? (
         <div className="h-64 flex items-center justify-center">
-          <p className="text-sm text-gray-500 font-open-sans-custom">No data yet. Start making requests!</p>
+          <p className="text-sm text-foreground/60 font-mono">No data yet. Start making requests!</p>
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={250}>
           <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="date" stroke="rgba(255,255,255,0.3)" style={{ fontSize: '12px' }} />
-            <YAxis stroke="rgba(255,255,255,0.3)" style={{ fontSize: '12px' }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--foreground) / 0.05)" />
+            <XAxis dataKey="date" stroke="hsl(var(--foreground) / 0.3)" style={{ fontSize: '12px', fontFamily: 'var(--font-geist-mono)' }} />
+            <YAxis stroke="hsl(var(--foreground) / 0.3)" style={{ fontSize: '12px', fontFamily: 'var(--font-geist-mono)' }} />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                backgroundColor: 'hsl(var(--background) / 0.95)',
+                border: '1px solid hsl(var(--foreground) / 0.1)',
                 borderRadius: '8px',
                 backdropFilter: 'blur(12px)',
               }}
-              labelStyle={{ color: '#fff', fontSize: '12px' }}
+              labelStyle={{ color: 'hsl(var(--foreground))', fontSize: '12px' }}
             />
             <Line
               type="monotone"
               dataKey="requests"
-              stroke="#60a5fa"
+              stroke="hsl(var(--primary))"
               strokeWidth={2}
-              dot={{ fill: '#60a5fa', strokeWidth: 0, r: 3 }}
-              activeDot={{ r: 5, fill: '#3b82f6' }}
+              dot={{ fill: 'hsl(var(--primary))', strokeWidth: 0, r: 3 }}
+              activeDot={{ r: 5, fill: 'hsl(var(--accent))' }}
             />
           </LineChart>
         </ResponsiveContainer>

@@ -66,6 +66,7 @@ export interface ServerMetrics {
 export interface ServerSelection {
   server: LiteLLMServer
   reason: 'priority' | 'least_connections' | 'round_robin' | 'failover'
+  actualModel?: string // The actual model name to use (for custom model mappings)
 }
 
 // ----------------------------------------------------------------------------

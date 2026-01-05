@@ -109,8 +109,8 @@ export const updateServerSchema = z.object({
 // OpenAI-Compatible Request Schemas
 // ----------------------------------------------------------------------------
 export const chatMessageSchema = z.object({
-  role: z.enum(['system', 'user', 'assistant', 'function']),
-  content: z.string(),
+  role: z.enum(['system', 'user', 'assistant', 'function', 'tool']),
+  content: z.union([z.string(), z.null()]).optional(),
   name: z.string().optional(),
   function_call: z
     .object({
@@ -118,6 +118,8 @@ export const chatMessageSchema = z.object({
       arguments: z.string(),
     })
     .optional(),
+  tool_calls: z.array(z.any()).optional(),
+  tool_call_id: z.string().optional(),
 })
 
 export const chatCompletionRequestSchema = z.object({

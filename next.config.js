@@ -70,6 +70,20 @@ const nextConfig = {
       },
     ]
   },
+
+  // Rewrites for OpenAI-compatible API paths
+  async rewrites() {
+    return [
+      {
+        source: '/v1/:path*',
+        destination: '/api/v1/:path*',
+      },
+      {
+        source: '/chat/completions',
+        destination: '/api/v1/chat/completions',
+      },
+    ]
+  },
 }
 
 module.exports = nextConfig

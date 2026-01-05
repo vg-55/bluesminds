@@ -26,8 +26,17 @@ export function StatsCards({ userId, stats }: StatsCardsProps) {
       icon: Zap,
       change: '+12%',
       positive: true,
-      color: 'text-blue-600 dark:text-blue-400',
-      bg: 'bg-blue-50 dark:bg-blue-900/20',
+      color: 'text-primary',
+      bg: 'bg-primary/10',
+    },
+    {
+      title: 'Tokens Used (Analytics)',
+      value: stats?.total_tokens?.toLocaleString() || '0',
+      icon: Activity,
+      change: '+15%',
+      positive: true,
+      color: 'text-accent',
+      bg: 'bg-accent/10',
     },
     {
       title: 'Total Cost',
@@ -35,17 +44,8 @@ export function StatsCards({ userId, stats }: StatsCardsProps) {
       icon: DollarSign,
       change: '+8%',
       positive: true,
-      color: 'text-green-600 dark:text-green-400',
-      bg: 'bg-green-50 dark:bg-green-900/20',
-    },
-    {
-      title: 'Avg Response Time',
-      value: `${stats?.avg_response_time || 0}ms`,
-      icon: Activity,
-      change: '-5%',
-      positive: true,
-      color: 'text-purple-600 dark:text-purple-400',
-      bg: 'bg-purple-50 dark:bg-purple-900/20',
+      color: 'text-primary',
+      bg: 'bg-primary/10',
     },
     {
       title: 'Error Rate',
@@ -55,8 +55,8 @@ export function StatsCards({ userId, stats }: StatsCardsProps) {
       icon: AlertTriangle,
       change: '-2%',
       positive: true,
-      color: 'text-orange-600 dark:text-orange-400',
-      bg: 'bg-orange-50 dark:bg-orange-900/20',
+      color: 'text-destructive',
+      bg: 'bg-destructive/10',
     },
   ]
 
@@ -67,29 +67,29 @@ export function StatsCards({ userId, stats }: StatsCardsProps) {
         const ChangeIcon = card.positive ? ArrowUpRight : ArrowDownRight
 
         return (
-          <div
+          <Card
             key={card.title}
-            className="bg-slate-900/50 dark:bg-slate-900/50 bg-white backdrop-blur-xl border border-white/5 dark:border-white/5 border-slate-200 rounded-xl p-6 hover:border-white/10 dark:hover:border-white/10 hover:border-slate-300 transition-colors"
+            className="p-6 hover:-translate-y-1 hover:shadow-lg"
           >
             <div className="flex items-center justify-between mb-4">
-              <div className={`p-2.5 rounded-lg ${card.bg}`}>
+              <div className={`p-2.5 rounded-lg ${card.bg} border border-foreground/10`}>
                 <Icon className={`w-5 h-5 ${card.color}`} />
               </div>
-              <div className={`flex items-center text-xs font-medium ${card.positive ? 'text-green-400' : 'text-red-400'}`}>
+              <div className={`flex items-center text-xs font-medium ${card.positive ? 'text-accent' : 'text-destructive'}`}>
                 <ChangeIcon className="w-3.5 h-3.5 mr-1" />
                 {card.change}
               </div>
             </div>
 
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-500 text-slate-600 font-open-sans-custom uppercase tracking-wide">
+              <p className="text-xs text-foreground/60 uppercase tracking-wide font-mono">
                 {card.title}
               </p>
-              <p className="text-2xl font-semibold text-white dark:text-white text-slate-900 mt-2 font-open-sans-custom">
+              <p className="text-2xl font-semibold text-foreground mt-2 font-mono">
                 {card.value}
               </p>
             </div>
-          </div>
+          </Card>
         )
       })}
     </div>

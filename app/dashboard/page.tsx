@@ -8,6 +8,9 @@ import { UsageChart } from '@/components/dashboard/usage-chart'
 import { RecentRequests } from '@/components/dashboard/recent-requests'
 import { QuickActions } from '@/components/dashboard/quick-actions'
 
+// Revalidate every 30 seconds to show fresh data
+export const revalidate = 30
+
 export default async function DashboardPage() {
   const supabase = await createServerClient()
   const {
@@ -21,18 +24,31 @@ export default async function DashboardPage() {
   try {
     const { getUserUsageStats } = await import('@/lib/gateway/usage-tracker')
     stats = await getUserUsageStats(user.id)
+    console.log('Dashboard stats loaded:', stats)
   } catch (error) {
     console.error('Failed to load stats:', error)
+  }
+
+  // If stats is null, provide default values
+  if (!stats) {
+    stats = {
+      total_requests: 0,
+      total_tokens: 0,
+      total_cost: 0,
+      error_count: 0,
+      avg_response_time: 0,
+      unique_models: 0,
+    }
   }
 
   return (
     <div className="space-y-8">
       {/* Page Header */}
       <div className="space-y-2">
-        <h1 className="text-4xl font-bold text-white dark:text-white text-slate-900 font-open-sans-custom">
-          Overview
+        <h1 className="text-4xl font-sentient text-foreground">
+          <i className="font-light">Overview</i>
         </h1>
-        <p className="text-gray-400 dark:text-gray-400 text-slate-600 font-open-sans-custom text-lg">
+        <p className="text-foreground/60 text-base font-mono">
           Monitor your API usage and performance metrics
         </p>
       </div>
