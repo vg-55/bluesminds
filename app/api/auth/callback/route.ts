@@ -49,6 +49,16 @@ export async function GET(request: NextRequest) {
       }
 
       if (authData.user) {
+        // Check if email is verified
+        const isEmailVerified = !!authData.user.email_confirmed_at
+
+        if (!isEmailVerified) {
+          logger.warn('User email not verified', { userId: authData.user.id })
+          return NextResponse.redirect(
+            new URL('/login?error=email_not_verified&message=Please verify your email first', requestUrl.origin)
+          )
+        }
+
         // Check if user profile exists
         const { data: profile } = await supabase
           .from('users')
@@ -56,9 +66,12 @@ export async function GET(request: NextRequest) {
           .eq('id', authData.user.id)
           .single()
 
-        // If profile doesn't exist, create it
+        // If profile doesn't exist, create it (for OAuth or newly verified email users)
         if (!profile) {
-          logger.info('Creating user profile for OAuth user', { userId: authData.user.id })
+          logger.info('Creating user profile for verified user', {
+            userId: authData.user.id,
+            isOAuth: !!authData.user.app_metadata?.provider
+          })
 
           const { error: createError } = await supabase.from('users').insert({
             id: authData.user.id,
@@ -75,9 +88,10 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        logger.auth('OAuth login successful', true, {
+        logger.auth('Authentication successful', true, {
           userId: authData.user.id,
           email: authData.user.email,
+          type: authData.user.app_metadata?.provider ? 'oauth' : 'email_verification',
         })
       }
 

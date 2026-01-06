@@ -23,11 +23,14 @@ export default function SignupPage() {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+  const [needsVerification, setNeedsVerification] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
+    setSuccessMessage('')
 
     try {
       const response = await fetch('/api/auth/signup', {
@@ -39,8 +42,20 @@ export default function SignupPage() {
       const result = await response.json()
 
       if (response.ok) {
-        router.push('/dashboard')
-        router.refresh()
+        // Check if email verification is needed
+        if (result.data?.needs_verification) {
+          setNeedsVerification(true)
+          setSuccessMessage(
+            result.message || 'Account created! Please check your email to verify your account.'
+          )
+        } else {
+          // Email is auto-confirmed, redirect to dashboard
+          setSuccessMessage(result.message || 'Account created successfully!')
+          setTimeout(() => {
+            router.push('/dashboard')
+            router.refresh()
+          }, 1000)
+        }
       } else {
         setError(result.error?.message || 'Signup failed')
       }
@@ -111,6 +126,23 @@ export default function SignupPage() {
             {error && (
               <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 backdrop-blur-sm">
                 <p className="text-sm text-red-200 [text-shadow:_0_2px_8px_rgb(0_0_0_/_40%)]">{error}</p>
+              </div>
+            )}
+
+            {successMessage && (
+              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 backdrop-blur-sm">
+                <p className="text-sm text-green-200 [text-shadow:_0_2px_8px_rgb(0_0_0_/_40%)] font-medium">
+                  {successMessage}
+                </p>
+                {needsVerification && (
+                  <p className="text-xs text-green-300/80 [text-shadow:_0_2px_8px_rgb(0_0_0_/_40%)] mt-2">
+                    Didn't receive the email? Check your spam folder or{' '}
+                    <Link href="/login" className="underline hover:text-white">
+                      try logging in
+                    </Link>
+                    .
+                  </p>
+                )}
               </div>
             )}
 

@@ -4,8 +4,8 @@
 
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createBrowserClient } from '@supabase/ssr'
@@ -16,10 +16,26 @@ import { Label } from '@/components/ui/label'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [infoMessage, setInfoMessage] = useState('')
+
+  useEffect(() => {
+    // Check for error or message in URL parameters
+    const urlError = searchParams.get('error')
+    const urlMessage = searchParams.get('message')
+
+    if (urlError === 'email_not_verified') {
+      setError(urlMessage || 'Please verify your email address before logging in.')
+    } else if (urlError === 'auth_failed') {
+      setError('Authentication failed. Please try again.')
+    } else if (urlMessage) {
+      setInfoMessage(urlMessage)
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -108,6 +124,12 @@ export default function LoginPage() {
             {error && (
               <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 backdrop-blur-sm">
                 <p className="text-sm text-red-200 [text-shadow:_0_2px_8px_rgb(0_0_0_/_40%)]">{error}</p>
+              </div>
+            )}
+
+            {infoMessage && (
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 backdrop-blur-sm">
+                <p className="text-sm text-blue-200 [text-shadow:_0_2px_8px_rgb(0_0_0_/_40%)]">{infoMessage}</p>
               </div>
             )}
 

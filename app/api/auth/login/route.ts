@@ -66,6 +66,13 @@ export async function POST(request: NextRequest) {
       throw new AuthenticationError('Login failed')
     }
 
+    // Check if email is verified
+    if (!authData.user.email_confirmed_at) {
+      throw new AuthenticationError(
+        'Please verify your email address. Check your inbox for a verification link.'
+      )
+    }
+
     // Get user profile (use service client to ensure access)
     const { data: profile, error: profileError } = await supabase
       .from('users')

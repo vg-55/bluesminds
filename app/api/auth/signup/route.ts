@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
       email,
       password,
       options: {
+        emailRedirectTo: `${env.NEXT_PUBLIC_APP_URL}/api/auth/callback`,
         data: {
           full_name,
           company_name,
@@ -66,40 +67,66 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user needs email verification
-    const needsVerification = authData.user.identities?.length === 0
+    const needsVerification = !authData.user.email_confirmed_at
+    const isEmailConfirmed = !!authData.user.email_confirmed_at
 
-    // Create user profile in our users table
-    const { error: profileError } = await supabase.from('users').insert({
-      id: authData.user.id,
-      email,
-      full_name: full_name || null,
-      company_name: company_name || null,
-      tier: 'free',
-      status: 'active',
-      referred_by: referral_code
-        ? (
-            await supabase
-              .from('users')
-              .select('id')
-              .eq('referral_code', referral_code)
-              .single()
-          ).data?.id || null
-        : null,
-    })
+    // Create user profile in our users table (only if email is confirmed or auto-confirmed)
+    if (isEmailConfirmed) {
+      const { error: profileError } = await supabase.from('users').insert({
+        id: authData.user.id,
+        email,
+        full_name: full_name || null,
+        company_name: company_name || null,
+        tier: 'free',
+        status: 'active',
+        referred_by: referral_code
+          ? (
+              await supabase
+                .from('users')
+                .select('id')
+                .eq('referral_code', referral_code)
+                .single()
+            ).data?.id || null
+          : null,
+      })
 
-    if (profileError) {
-      logger.error('Failed to create user profile', profileError)
-      // Don't throw - auth user was created successfully
+      if (profileError) {
+        logger.error('Failed to create user profile', profileError)
+        // Don't throw - auth user was created successfully
+      }
     }
 
     logger.info('User signed up', {
       userId: authData.user.id,
       email,
+      needsVerification,
     })
+
+    // Return appropriate response based on verification status
+    if (needsVerification) {
+      return NextResponse.json(
+        {
+          success: true,
+          message: 'Account created! Please check your email to verify your account.',
+          data: {
+            user: {
+              id: authData.user.id,
+              email: authData.user.email,
+              full_name,
+            },
+            session: null, // No session until verified
+            needs_verification: true,
+            email_confirmed: false,
+          },
+        },
+        { status: 201 }
+      )
+    }
 
     return NextResponse.json(
       {
         success: true,
+        message: 'Account created successfully!',
         data: {
           user: {
             id: authData.user.id,
@@ -107,7 +134,8 @@ export async function POST(request: NextRequest) {
             full_name,
           },
           session: authData.session,
-          needs_verification: needsVerification,
+          needs_verification: false,
+          email_confirmed: true,
         },
       },
       { status: 201 }
