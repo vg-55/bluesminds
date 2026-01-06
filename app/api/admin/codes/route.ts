@@ -3,14 +3,15 @@
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/client'
+import { createServerClient } from '@/lib/supabase/client'
+import { logCodeAction, extractRequestContext } from '@/lib/audit/audit-logger'
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/admin/codes - Get all redemption codes
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = await createServerClient()
 
     // Fetch all codes
     const { data: codes, error } = await supabase
@@ -69,8 +70,18 @@ export async function GET(request: NextRequest) {
 // POST /api/admin/codes - Create a new redemption code
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = await createServerClient()
     const body = await request.json()
+
+    // Get current user (admin)
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     // Generate random code
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -88,11 +99,29 @@ export async function POST(request: NextRequest) {
         max_uses: body.type === 'unlimited' ? null : body.maxUses,
         expires_at: body.expiresAt || null,
         status: 'active',
+        created_by: user.id,
       })
       .select()
       .single()
 
     if (error) throw error
+
+    // Log the creation to audit log
+    const { ipAddress, userAgent } = extractRequestContext(request)
+    await logCodeAction({
+      adminUserId: user.id,
+      actionType: 'create',
+      codeId: data.id,
+      codeData: {
+        code: data.code,
+        requests: data.requests,
+        type: data.type,
+        maxUses: data.max_uses,
+        expiresAt: data.expires_at,
+      },
+      ipAddress,
+      userAgent,
+    })
 
     return NextResponse.json({
       id: data.id,
@@ -102,7 +131,7 @@ export async function POST(request: NextRequest) {
       maxUses: data.max_uses,
       currentUses: data.current_uses,
       status: data.status,
-      createdBy: 'admin@bluesminds.com',
+      createdBy: user.id,
       createdAt: data.created_at,
       expiresAt: data.expires_at,
     })
@@ -118,7 +147,7 @@ export async function POST(request: NextRequest) {
 // DELETE /api/admin/codes/[id] - Delete a code
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = await createServerClient()
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
@@ -126,12 +155,46 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Code ID required' }, { status: 400 })
     }
 
+    // Get current user (admin)
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Get code details before deletion for audit log
+    const { data: codeData } = await supabase
+      .from('redemption_codes')
+      .select('*')
+      .eq('id', id)
+      .single()
+
     const { error } = await supabase
       .from('redemption_codes')
       .delete()
       .eq('id', id)
 
     if (error) throw error
+
+    // Log the deletion to audit log
+    if (codeData) {
+      const { ipAddress, userAgent } = extractRequestContext(request)
+      await logCodeAction({
+        adminUserId: user.id,
+        actionType: 'delete',
+        codeId: id,
+        codeData: {
+          code: codeData.code,
+          requests: codeData.requests,
+          type: codeData.type,
+        },
+        ipAddress,
+        userAgent,
+      })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

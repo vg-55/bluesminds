@@ -27,6 +27,9 @@ const nextConfig = {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   },
 
+  // Turbopack configuration (Next.js 16+)
+  turbopack: {},
+
   // Webpack configuration
   webpack: (config, { isServer }) => {
     // Fix for certain packages

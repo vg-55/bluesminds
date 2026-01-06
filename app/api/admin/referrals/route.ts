@@ -3,14 +3,14 @@
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/client'
+import { createServerClient } from '@/lib/supabase/client'
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/admin/referrals - Get all referrals with stats
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = await createServerClient()
 
     // Check if user is admin (you should implement this check based on your auth)
     // For now, we'll assume the request is authenticated

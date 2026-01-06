@@ -66,16 +66,63 @@ export async function POST(request: NextRequest) {
       throw new AuthenticationError('Login failed')
     }
 
-    // Get user profile
-    const { data: profile } = await supabase
+    // Get user profile (use service client to ensure access)
+    const { data: profile, error: profileError } = await supabase
       .from('users')
       .select('*')
       .eq('id', authData.user.id)
       .single()
 
+    // If profile doesn't exist, create it (fallback for old users or trigger failures)
+    if (!profile || profileError) {
+      logger.warn('User profile not found, creating...', { userId: authData.user.id })
+
+      const { error: createError } = await supabase.from('users').insert({
+        id: authData.user.id,
+        email: authData.user.email!,
+        full_name: authData.user.user_metadata?.full_name || authData.user.user_metadata?.name || null,
+        company_name: authData.user.user_metadata?.company_name || null,
+        tier: 'free',
+        status: 'active',
+      })
+
+      if (createError) {
+        logger.error('Failed to create user profile', createError)
+        // Continue anyway - they can still use the service
+      }
+
+      // Fetch the newly created profile
+      const { data: newProfile } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single()
+
+      // Check status
+      if (newProfile?.status !== 'active') {
+        throw new AuthenticationError(`Account is ${newProfile?.status || 'inactive'}`)
+      }
+
+      // Use new profile
+      logger.info('User profile created on login', { userId: authData.user.id })
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          user: {
+            id: authData.user.id,
+            email: authData.user.email,
+            full_name: newProfile?.full_name,
+            tier: newProfile?.tier,
+          },
+          session: authData.session,
+        },
+      })
+    }
+
     // Check user status
-    if (profile?.status !== 'active') {
-      throw new AuthenticationError(`Account is ${profile?.status || 'inactive'}`)
+    if (profile.status !== 'active') {
+      throw new AuthenticationError(`Account is ${profile.status}`)
     }
 
     logger.auth('Login successful', true, {
