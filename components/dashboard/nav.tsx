@@ -15,6 +15,7 @@ import {
   BookOpen,
   Server,
   Users,
+  Gift,
 } from 'lucide-react'
 
 interface NavItem {
@@ -34,6 +35,11 @@ const navItems: NavItem[] = [
     name: 'API Keys',
     href: '/dashboard/keys',
     icon: Key,
+  },
+  {
+    name: 'Referrals',
+    href: '/dashboard/referrals',
+    icon: Gift,
   },
   {
     name: 'Billing',

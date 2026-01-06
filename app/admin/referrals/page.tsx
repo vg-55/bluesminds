@@ -38,11 +38,15 @@ interface ReferralData {
 }
 
 interface ReferralSettings {
+  rewardType: "requests" | "credits";
   referrerRewardType: "fixed" | "percentage";
   referrerRewardValue: number;
   refereeRewardType: "fixed" | "percentage";
   refereeRewardValue: number;
+  referrerRequests: number;
+  refereeRequests: number;
   minPurchaseAmount: number;
+  minQualifyingRequests: number;
   enabled: boolean;
 }
 
@@ -62,11 +66,15 @@ export default function AdminReferralsPage() {
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settings, setSettings] = useState<ReferralSettings>({
+    rewardType: "requests",
     referrerRewardType: "fixed",
     referrerRewardValue: 50,
     refereeRewardType: "fixed",
     refereeRewardValue: 10,
+    referrerRequests: 1000,
+    refereeRequests: 500,
     minPurchaseAmount: 100,
+    minQualifyingRequests: 10,
     enabled: true,
   });
 
@@ -442,16 +450,160 @@ export default function AdminReferralsPage() {
                     </div>
                   </div>
 
-                  {/* Referrer Rewards */}
-                  <div className="space-y-4">
+                  {/* Reward Type Selection */}
+                  <div className="p-4 rounded-lg bg-foreground/[0.02] border border-foreground/10">
                     <div>
-                      <h3 className="font-mono font-semibold text-lg mb-1">
-                        Referrer Rewards
-                      </h3>
-                      <p className="font-mono text-xs text-foreground/60">
-                        Reward for users who invite others
+                      <label className="font-mono text-sm font-medium block mb-2">
+                        Reward Type
+                      </label>
+                      <p className="font-mono text-xs text-foreground/60 mb-3">
+                        Choose how to reward users for referrals
                       </p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <button
+                          onClick={() => setSettings({ ...settings, rewardType: "requests" })}
+                          className={`p-4 rounded-lg border transition-all ${
+                            settings.rewardType === "requests"
+                              ? "border-primary bg-primary/10 shadow-sm"
+                              : "border-foreground/10 bg-foreground/[0.02] hover:bg-foreground/5"
+                          }`}
+                        >
+                          <div className="text-left">
+                            <p className="font-mono text-sm font-semibold">
+                              API Requests
+                            </p>
+                            <p className="font-mono text-xs text-foreground/60 mt-1">
+                              Reward with free API requests
+                            </p>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => setSettings({ ...settings, rewardType: "credits" })}
+                          className={`p-4 rounded-lg border transition-all ${
+                            settings.rewardType === "credits"
+                              ? "border-primary bg-primary/10 shadow-sm"
+                              : "border-foreground/10 bg-foreground/[0.02] hover:bg-foreground/5"
+                          }`}
+                        >
+                          <div className="text-left">
+                            <p className="font-mono text-sm font-semibold">
+                              Credits ($)
+                            </p>
+                            <p className="font-mono text-xs text-foreground/60 mt-1">
+                              Reward with account credits
+                            </p>
+                          </div>
+                        </button>
+                      </div>
                     </div>
+                  </div>
+
+                  {/* Request-Based Rewards */}
+                  {settings.rewardType === "requests" && (
+                    <>
+                      {/* Referrer Requests */}
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="font-mono font-semibold text-lg mb-1">
+                            Referrer Rewards (Requests)
+                          </h3>
+                          <p className="font-mono text-xs text-foreground/60">
+                            Free API requests for users who invite others
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block font-mono text-sm mb-2 uppercase tracking-wide">
+                            Free Requests
+                          </label>
+                          <input
+                            type="number"
+                            value={settings.referrerRequests}
+                            onChange={(e) =>
+                              setSettings({
+                                ...settings,
+                                referrerRequests: parseInt(e.target.value) || 0,
+                              })
+                            }
+                            className="w-full px-4 py-3 rounded-lg bg-foreground/[0.02] border border-foreground/10 focus:border-primary focus:outline-none font-mono text-sm"
+                            placeholder="1000"
+                          />
+                          <p className="font-mono text-xs text-foreground/40 mt-1">
+                            Referrer gets {settings.referrerRequests} free API requests per successful referral
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Referee Requests */}
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="font-mono font-semibold text-lg mb-1">
+                            Referee Rewards (Requests)
+                          </h3>
+                          <p className="font-mono text-xs text-foreground/60">
+                            Free API requests for new users who sign up via referral link
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block font-mono text-sm mb-2 uppercase tracking-wide">
+                            Free Requests
+                          </label>
+                          <input
+                            type="number"
+                            value={settings.refereeRequests}
+                            onChange={(e) =>
+                              setSettings({
+                                ...settings,
+                                refereeRequests: parseInt(e.target.value) || 0,
+                              })
+                            }
+                            className="w-full px-4 py-3 rounded-lg bg-foreground/[0.02] border border-foreground/10 focus:border-primary focus:outline-none font-mono text-sm"
+                            placeholder="500"
+                          />
+                          <p className="font-mono text-xs text-foreground/40 mt-1">
+                            New user gets {settings.refereeRequests} free API requests upon signup
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Minimum Qualifying Requests */}
+                      <div className="space-y-2">
+                        <label className="block font-mono text-sm font-medium uppercase tracking-wide">
+                          Minimum Qualifying Requests
+                        </label>
+                        <input
+                          type="number"
+                          value={settings.minQualifyingRequests}
+                          onChange={(e) =>
+                            setSettings({
+                              ...settings,
+                              minQualifyingRequests: parseInt(e.target.value) || 0,
+                            })
+                          }
+                          className="w-full px-4 py-3 rounded-lg bg-foreground/[0.02] border border-foreground/10 focus:border-primary focus:outline-none font-mono text-sm"
+                          placeholder="10"
+                        />
+                        <p className="font-mono text-xs text-foreground/40">
+                          Referee must make at least {settings.minQualifyingRequests} successful API requests for referrer to receive reward
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Credit-Based Rewards */}
+                  {settings.rewardType === "credits" && (
+                    <>
+                      {/* Referrer Rewards */}
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="font-mono font-semibold text-lg mb-1">
+                            Referrer Rewards (Credits)
+                          </h3>
+                          <p className="font-mono text-xs text-foreground/60">
+                            Reward for users who invite others
+                          </p>
+                        </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -564,32 +716,34 @@ export default function AdminReferralsPage() {
                     </div>
                   </div>
 
-                  {/* Minimum Purchase */}
-                  <div className="space-y-2">
-                    <label className="block font-mono text-sm font-medium uppercase tracking-wide">
-                      Minimum Purchase Amount
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono text-sm text-foreground/60">
-                        $
-                      </span>
-                      <input
-                        type="number"
-                        value={settings.minPurchaseAmount}
-                        onChange={(e) =>
-                          setSettings({
-                            ...settings,
-                            minPurchaseAmount: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        className="w-full pl-8 pr-4 py-3 rounded-lg bg-foreground/[0.02] border border-foreground/10 focus:border-primary focus:outline-none font-mono text-sm"
-                        placeholder="100"
-                      />
-                    </div>
-                    <p className="font-mono text-xs text-foreground/40">
-                      Referee must spend at least ${settings.minPurchaseAmount} for referrer to receive reward
-                    </p>
-                  </div>
+                      {/* Minimum Purchase (only for credits) */}
+                      <div className="space-y-2">
+                        <label className="block font-mono text-sm font-medium uppercase tracking-wide">
+                          Minimum Purchase Amount
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono text-sm text-foreground/60">
+                            $
+                          </span>
+                          <input
+                            type="number"
+                            value={settings.minPurchaseAmount}
+                            onChange={(e) =>
+                              setSettings({
+                                ...settings,
+                                minPurchaseAmount: parseFloat(e.target.value) || 0,
+                              })
+                            }
+                            className="w-full pl-8 pr-4 py-3 rounded-lg bg-foreground/[0.02] border border-foreground/10 focus:border-primary focus:outline-none font-mono text-sm"
+                            placeholder="100"
+                          />
+                        </div>
+                        <p className="font-mono text-xs text-foreground/40">
+                          Referee must spend at least ${settings.minPurchaseAmount} for referrer to receive reward
+                        </p>
+                      </div>
+                    </>
+                  )}
 
                   {/* Preview */}
                   <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
@@ -597,19 +751,31 @@ export default function AdminReferralsPage() {
                       Preview
                     </h3>
                     <div className="space-y-1 font-mono text-xs text-blue-300">
-                      <p>
-                        • Referrer earns:{" "}
-                        {settings.referrerRewardType === "fixed"
-                          ? `$${settings.referrerRewardValue}`
-                          : `${settings.referrerRewardValue}% of purchase`}
-                      </p>
-                      <p>
-                        • Referee gets:{" "}
-                        {settings.refereeRewardType === "fixed"
-                          ? `$${settings.refereeRewardValue} credit`
-                          : `${settings.refereeRewardValue}% discount`}
-                      </p>
-                      <p>• Minimum purchase required: ${settings.minPurchaseAmount}</p>
+                      {settings.rewardType === "requests" ? (
+                        <>
+                          <p>• Reward Type: API Requests</p>
+                          <p>• Referrer earns: {settings.referrerRequests} free API requests</p>
+                          <p>• Referee gets: {settings.refereeRequests} free API requests</p>
+                          <p>• Minimum qualifying requests: {settings.minQualifyingRequests}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p>• Reward Type: Credits ($)</p>
+                          <p>
+                            • Referrer earns:{" "}
+                            {settings.referrerRewardType === "fixed"
+                              ? `$${settings.referrerRewardValue}`
+                              : `${settings.referrerRewardValue}% of purchase`}
+                          </p>
+                          <p>
+                            • Referee gets:{" "}
+                            {settings.refereeRewardType === "fixed"
+                              ? `$${settings.refereeRewardValue} credit`
+                              : `${settings.refereeRewardValue}% discount`}
+                          </p>
+                          <p>• Minimum purchase required: ${settings.minPurchaseAmount}</p>
+                        </>
+                      )}
                       <p>• Program status: {settings.enabled ? "Enabled" : "Disabled"}</p>
                     </div>
                   </div>

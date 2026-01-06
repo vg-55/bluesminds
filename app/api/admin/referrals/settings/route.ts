@@ -23,11 +23,15 @@ export async function GET(request: NextRequest) {
     if (error) throw error
 
     return NextResponse.json({
+      rewardType: data.reward_type || 'requests',
       referrerRewardType: data.referrer_reward_type,
-      referrerRewardValue: parseFloat(data.referrer_reward_value),
+      referrerRewardValue: parseFloat(data.referrer_reward_value || 0),
       refereeRewardType: data.referee_reward_type,
-      refereeRewardValue: parseFloat(data.referee_reward_value),
-      minPurchaseAmount: parseFloat(data.min_purchase_amount),
+      refereeRewardValue: parseFloat(data.referee_reward_value || 0),
+      referrerRequests: data.referrer_requests || 1000,
+      refereeRequests: data.referee_requests || 500,
+      minPurchaseAmount: parseFloat(data.min_purchase_amount || 0),
+      minQualifyingRequests: data.min_qualifying_requests || 10,
       enabled: data.enabled,
     })
   } catch (error) {
@@ -71,21 +75,29 @@ export async function PATCH(request: NextRequest) {
 
     // Create old settings object for audit
     const oldSettings = {
+      rewardType: currentSettings.reward_type || 'requests',
       referrerRewardType: currentSettings.referrer_reward_type,
-      referrerRewardValue: parseFloat(currentSettings.referrer_reward_value),
+      referrerRewardValue: parseFloat(currentSettings.referrer_reward_value || 0),
       refereeRewardType: currentSettings.referee_reward_type,
-      refereeRewardValue: parseFloat(currentSettings.referee_reward_value),
-      minPurchaseAmount: parseFloat(currentSettings.min_purchase_amount),
+      refereeRewardValue: parseFloat(currentSettings.referee_reward_value || 0),
+      referrerRequests: currentSettings.referrer_requests || 1000,
+      refereeRequests: currentSettings.referee_requests || 500,
+      minPurchaseAmount: parseFloat(currentSettings.min_purchase_amount || 0),
+      minQualifyingRequests: currentSettings.min_qualifying_requests || 10,
       enabled: currentSettings.enabled,
     }
 
     // New settings object
     const newSettings = {
+      rewardType: body.rewardType || 'requests',
       referrerRewardType: body.referrerRewardType,
       referrerRewardValue: body.referrerRewardValue,
       refereeRewardType: body.refereeRewardType,
       refereeRewardValue: body.refereeRewardValue,
-      minPurchaseAmount: body.minPurchaseAmount,
+      referrerRequests: body.referrerRequests || 1000,
+      refereeRequests: body.refereeRequests || 500,
+      minPurchaseAmount: body.minPurchaseAmount || 0,
+      minQualifyingRequests: body.minQualifyingRequests || 10,
       enabled: body.enabled,
     }
 
@@ -107,11 +119,15 @@ export async function PATCH(request: NextRequest) {
     const { data, error } = await supabase
       .from('referral_settings')
       .update({
+        reward_type: body.rewardType || 'requests',
         referrer_reward_type: body.referrerRewardType,
-        referrer_reward_value: body.referrerRewardValue,
+        referrer_reward_value: body.referrerRewardValue || 0,
         referee_reward_type: body.refereeRewardType,
-        referee_reward_value: body.refereeRewardValue,
-        min_purchase_amount: body.minPurchaseAmount,
+        referee_reward_value: body.refereeRewardValue || 0,
+        referrer_requests: body.referrerRequests || 1000,
+        referee_requests: body.refereeRequests || 500,
+        min_purchase_amount: body.minPurchaseAmount || 0,
+        min_qualifying_requests: body.minQualifyingRequests || 10,
         enabled: body.enabled,
         updated_at: new Date().toISOString(),
       })
@@ -132,11 +148,15 @@ export async function PATCH(request: NextRequest) {
     })
 
     return NextResponse.json({
+      rewardType: data.reward_type || 'requests',
       referrerRewardType: data.referrer_reward_type,
-      referrerRewardValue: parseFloat(data.referrer_reward_value),
+      referrerRewardValue: parseFloat(data.referrer_reward_value || 0),
       refereeRewardType: data.referee_reward_type,
-      refereeRewardValue: parseFloat(data.referee_reward_value),
-      minPurchaseAmount: parseFloat(data.min_purchase_amount),
+      refereeRewardValue: parseFloat(data.referee_reward_value || 0),
+      referrerRequests: data.referrer_requests || 1000,
+      refereeRequests: data.referee_requests || 500,
+      minPurchaseAmount: parseFloat(data.min_purchase_amount || 0),
+      minQualifyingRequests: data.min_qualifying_requests || 10,
       enabled: data.enabled,
       version: versionResult.version,
     })

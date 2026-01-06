@@ -7,6 +7,7 @@ import { StatsCards } from '@/components/dashboard/stats-cards'
 import { UsageChart } from '@/components/dashboard/usage-chart'
 import { RecentRequests } from '@/components/dashboard/recent-requests'
 import { QuickActions } from '@/components/dashboard/quick-actions'
+import { ReferralSection } from '@/components/dashboard/referral-section'
 
 // Revalidate every 30 seconds to show fresh data
 export const revalidate = 30
@@ -63,6 +64,11 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <UsageChart userId={user.id} />
         <RecentRequests userId={user.id} />
+      </div>
+
+      {/* Referral Section */}
+      <div className="pt-4">
+        <ReferralSection userId={user.id} />
       </div>
     </div>
   )

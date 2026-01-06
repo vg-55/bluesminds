@@ -49,7 +49,8 @@ export default function SettingsPage() {
     try {
       const res = await fetch('/api/auth/me')
       if (res.ok) {
-        const data = await res.json()
+        const response = await res.json()
+        const data = response.data || response
         setProfile(data)
         setFullName(data.full_name || '')
         setCompanyName(data.company_name || '')
@@ -76,7 +77,8 @@ export default function SettingsPage() {
       })
 
       if (res.ok) {
-        const data = await res.json()
+        const response = await res.json()
+        const data = response.data || response
         setProfile(data)
         setMessage({ type: 'success', text: 'Settings saved successfully!' })
       } else {
