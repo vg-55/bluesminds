@@ -1,8 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { AdminRoute } from "@/components/admin-route";
 import { AdminLayout } from "@/components/admin-layout";
-import { FileText, AlertTriangle, CheckCircle2, Info, XCircle } from "lucide-react";
+import { FileText, AlertTriangle, CheckCircle2, Info, XCircle, Loader2 } from "lucide-react";
 
 interface AuditLog {
   id: string;
@@ -13,74 +14,137 @@ interface AuditLog {
   timestamp: string;
 }
 
-const mockLogs: AuditLog[] = [
-  {
-    id: "1",
-    type: "success",
-    action: "User Login",
-    user: "alice@example.com",
-    details: "Successful login from IP 192.168.1.1",
-    timestamp: "2024-01-03 14:32:15",
-  },
-  {
-    id: "2",
-    type: "info",
-    action: "API Key Created",
-    user: "bob@example.com",
-    details: "Created new API key: bm_live_***3456",
-    timestamp: "2024-01-03 14:28:42",
-  },
-  {
-    id: "3",
-    type: "warning",
-    action: "Rate Limit Exceeded",
-    user: "carol@example.com",
-    details: "User exceeded rate limit (1000 req/min)",
-    timestamp: "2024-01-03 14:15:23",
-  },
-  {
-    id: "4",
-    type: "error",
-    action: "Failed Payment",
-    user: "david@example.com",
-    details: "Payment failed for invoice #INV-2024-001",
-    timestamp: "2024-01-03 13:56:08",
-  },
-  {
-    id: "5",
-    type: "success",
-    action: "Plan Upgraded",
-    user: "eve@example.com",
-    details: "Upgraded from Starter to Professional plan",
-    timestamp: "2024-01-03 13:42:19",
-  },
-  {
-    id: "6",
-    type: "info",
-    action: "Settings Changed",
-    user: "admin@bluesminds.com",
-    details: "Updated platform rate limits",
-    timestamp: "2024-01-03 12:18:34",
-  },
-  {
-    id: "7",
-    type: "warning",
-    action: "High API Usage",
-    user: "frank@example.com",
-    details: "Usage exceeded 90% of monthly quota",
-    timestamp: "2024-01-03 11:45:52",
-  },
-  {
-    id: "8",
-    type: "error",
-    action: "Provider Timeout",
-    user: "system",
-    details: "OpenAI API timeout - request ID: req_abc123",
-    timestamp: "2024-01-03 10:23:41",
-  },
-];
+interface AuditLogData {
+  logs: Array<{
+    id: string;
+    action_type: string;
+    resource_type: string;
+    resource_id?: string;
+    action_description: string;
+    admin_user: {
+      email: string;
+      full_name?: string;
+    };
+    old_values?: any;
+    new_values?: any;
+    ip_address?: string;
+    created_at: string;
+  }>;
+  total: number;
+}
 
 export default function AdminLogsPage() {
+  const [data, setData] = useState<AuditLogData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadLogs();
+  }, []);
+
+  const loadLogs = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch('/api/admin/audit?limit=50');
+
+      if (!res.ok) {
+        throw new Error('Failed to load audit logs');
+      }
+
+      const logsData = await res.json();
+      setData(logsData);
+    } catch (err) {
+      console.error('Failed to load audit logs:', err);
+      setError('Failed to load audit logs');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Map audit logs to display format
+  const formatLogs = (): AuditLog[] => {
+    if (!data?.logs) return [];
+
+    return data.logs.map((log) => {
+      // Determine type based on action
+      let type: AuditLog["type"] = "info";
+      if (log.action_type === "delete" || log.action_type === "deactivate") {
+        type = "warning";
+      } else if (log.action_type === "create" || log.action_type === "activate") {
+        type = "success";
+      }
+
+      // Format details
+      let details = log.action_description;
+      if (log.resource_type && log.resource_id) {
+        details += ` [${log.resource_type}: ${log.resource_id.substring(0, 8)}...]`;
+      }
+      if (log.ip_address) {
+        details += ` from ${log.ip_address}`;
+      }
+
+      return {
+        id: log.id,
+        type,
+        action: `${log.action_type.toUpperCase()}: ${log.resource_type}`,
+        user: log.admin_user?.email || 'Unknown',
+        details,
+        timestamp: new Date(log.created_at).toLocaleString(),
+      };
+    });
+  };
+
+  if (loading) {
+    return (
+      <AdminRoute>
+        <AdminLayout>
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        </AdminLayout>
+      </AdminRoute>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminRoute>
+        <AdminLayout>
+          <div className="p-6 rounded-lg border border-red-500/20 bg-red-500/10">
+            <p className="text-red-500 font-mono">{error}</p>
+          </div>
+        </AdminLayout>
+      </AdminRoute>
+    );
+  }
+
+  const logs = formatLogs();
+
+  if (logs.length === 0) {
+    return (
+      <AdminRoute>
+        <AdminLayout>
+          <div className="space-y-8">
+            <div>
+              <h1 className="text-3xl font-sentient mb-2">
+                Audit <i className="font-light">Logs</i>
+              </h1>
+              <p className="font-mono text-sm text-foreground/60">
+                Track all system events and user actions
+              </p>
+            </div>
+            <div className="p-12 text-center rounded-lg border border-foreground/10 bg-foreground/[0.02]">
+              <FileText className="w-12 h-12 mx-auto mb-4 text-foreground/20" />
+              <p className="font-mono text-sm text-foreground/60">
+                No audit logs recorded yet
+              </p>
+            </div>
+          </div>
+        </AdminLayout>
+      </AdminRoute>
+    );
+  }
   const getIcon = (type: AuditLog["type"]) => {
     switch (type) {
       case "success":
@@ -129,7 +193,7 @@ export default function AdminLogsPage() {
                 <p className="font-mono text-sm text-foreground/60">Info</p>
               </div>
               <p className="font-mono text-2xl font-semibold">
-                {mockLogs.filter((l) => l.type === "info").length}
+                {logs.filter((l) => l.type === "info").length}
               </p>
             </div>
             <div className="p-4 rounded-lg border border-foreground/10 bg-foreground/[0.02]">
@@ -138,7 +202,7 @@ export default function AdminLogsPage() {
                 <p className="font-mono text-sm text-foreground/60">Success</p>
               </div>
               <p className="font-mono text-2xl font-semibold">
-                {mockLogs.filter((l) => l.type === "success").length}
+                {logs.filter((l) => l.type === "success").length}
               </p>
             </div>
             <div className="p-4 rounded-lg border border-foreground/10 bg-foreground/[0.02]">
@@ -147,7 +211,7 @@ export default function AdminLogsPage() {
                 <p className="font-mono text-sm text-foreground/60">Warnings</p>
               </div>
               <p className="font-mono text-2xl font-semibold">
-                {mockLogs.filter((l) => l.type === "warning").length}
+                {logs.filter((l) => l.type === "warning").length}
               </p>
             </div>
             <div className="p-4 rounded-lg border border-foreground/10 bg-foreground/[0.02]">
@@ -156,14 +220,14 @@ export default function AdminLogsPage() {
                 <p className="font-mono text-sm text-foreground/60">Errors</p>
               </div>
               <p className="font-mono text-2xl font-semibold">
-                {mockLogs.filter((l) => l.type === "error").length}
+                {logs.filter((l) => l.type === "error").length}
               </p>
             </div>
           </div>
 
           {/* Logs */}
           <div className="space-y-3">
-            {mockLogs.map((log) => (
+            {logs.map((log) => (
               <div
                 key={log.id}
                 className={`p-4 rounded-lg border ${getTypeColor(log.type)}`}
