@@ -4,12 +4,12 @@
   "framework": "nextjs",
   "regions": ["iad1"],
   "env": {
-    "NEXT_PUBLIC_SUPABASE_URL": "@supabase_url",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@supabase_anon_key",
-    "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
-    "JWT_SECRET": "@jwt_secret",
-    "API_KEY_SECRET": "@api_key_secret",
-    "NEXT_PUBLIC_APP_URL": "@app_url"
+    "NEXT_PUBLIC_SUPABASE_URL": "@supabase-url",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@supabase-anon-key",
+    "SUPABASE_SERVICE_ROLE_KEY": "@supabase-service-role-key",
+    "JWT_SECRET": "@jwt-secret",
+    "API_KEY_SECRET": "@api-key-secret",
+    "NEXT_PUBLIC_APP_URL": "@app-url"
   },
   "functions": {
     "app/api/**": {
