@@ -73,6 +73,27 @@ export async function GET(request: NextRequest) {
             isOAuth: !!authData.user.app_metadata?.provider
           })
 
+          // Check for referral code in cookies
+          const referralCode = cookieStore.get('referral_code')?.value
+          let referredBy: string | null = null
+
+          if (referralCode) {
+            // Look up the referrer by their referral code
+            const { data: referrer } = await supabase
+              .from('users')
+              .select('id')
+              .eq('referral_code', referralCode)
+              .single()
+
+            if (referrer) {
+              referredBy = referrer.id
+              logger.info('User referred by', { referralCode, referrerId: referrer.id })
+            }
+
+            // Clear the referral code cookie
+            cookieStore.delete('referral_code')
+          }
+
           const { error: createError } = await supabase.from('users').insert({
             id: authData.user.id,
             email: authData.user.email!,
@@ -80,6 +101,7 @@ export async function GET(request: NextRequest) {
             company_name: authData.user.user_metadata?.company_name || null,
             tier: 'free',
             status: 'active',
+            referred_by: referredBy,
           })
 
           if (createError) {

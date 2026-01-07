@@ -4,8 +4,8 @@
 
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createBrowserClient } from '@supabase/ssr'
@@ -16,15 +16,25 @@ import { Label } from '@/components/ui/label'
 
 export default function SignupPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     full_name: '',
+    referral_code: '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [needsVerification, setNeedsVerification] = useState(false)
+
+  // Read referral code from URL parameter
+  useEffect(() => {
+    const refCode = searchParams.get('ref')
+    if (refCode) {
+      setFormData(prev => ({ ...prev, referral_code: refCode }))
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -70,6 +80,11 @@ export default function SignupPage() {
     try {
       setLoading(true)
       setError('')
+
+      // Store referral code in cookie for OAuth flow (expires in 1 hour)
+      if (formData.referral_code) {
+        document.cookie = `referral_code=${formData.referral_code}; path=/; max-age=3600; SameSite=Lax`
+      }
 
       const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -206,6 +221,30 @@ export default function SignupPage() {
               <p className="text-xs text-gray-400 [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)] font-open-sans-custom">
                 At least 8 characters with uppercase, lowercase, and number
               </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="referral_code"
+                className="text-white [text-shadow:_0_2px_8px_rgb(0_0_0_/_40%)] font-open-sans-custom"
+              >
+                Referral Code <span className="text-gray-400 text-xs">(Optional)</span>
+              </Label>
+              <Input
+                id="referral_code"
+                type="text"
+                value={formData.referral_code}
+                onChange={(e) =>
+                  setFormData({ ...formData, referral_code: e.target.value.toUpperCase() })
+                }
+                placeholder="Enter code"
+                className="bg-white/10 border-white/20 text-white placeholder:text-gray-400 [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)] focus:border-white/40 focus:bg-white/15 transition-all uppercase"
+              />
+              {formData.referral_code && (
+                <p className="text-xs text-green-400 [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)] font-open-sans-custom">
+                  ✓ You&apos;ll receive bonus requests on signup
+                </p>
+              )}
             </div>
 
             <Button

@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/client'
+import { ensureUserProfile } from '@/lib/utils/ensure-user-profile'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,6 +22,9 @@ export async function GET(request: NextRequest) {
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Ensure user profile exists in database
+    await ensureUserProfile(supabase, user.id)
 
     // Verify admin role
     const { data: profile } = await supabase
