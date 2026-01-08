@@ -3,7 +3,8 @@
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/client'
+import { createServerClient, supabaseAdmin } from '@/lib/supabase/client'
+import { checkAdminAccess } from '@/lib/utils/check-admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,11 +13,16 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerClient()
 
-    // Check if user is admin (you should implement this check based on your auth)
-    // For now, we'll assume the request is authenticated
+    // Check admin access
+    await checkAdminAccess(supabase)
+
+    // Use supabaseAdmin to bypass RLS restrictions
+    if (!supabaseAdmin) {
+      throw new Error('Service role client not available')
+    }
 
     // Fetch all referrals with user details
-    const { data: referrals, error } = await supabase
+    const { data: referrals, error } = await supabaseAdmin
       .from('referrals')
       .select(`
         id,

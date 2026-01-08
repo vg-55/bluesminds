@@ -3,7 +3,8 @@
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/client'
+import { createServerClient, supabaseAdmin } from '@/lib/supabase/client'
+import { checkAdminAccess } from '@/lib/utils/check-admin'
 import { logCodeAction, extractRequestContext } from '@/lib/audit/audit-logger'
 
 export const dynamic = 'force-dynamic'
@@ -13,8 +14,16 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerClient()
 
+    // Check admin access
+    await checkAdminAccess(supabase)
+
+    // Use supabaseAdmin to bypass RLS restrictions
+    if (!supabaseAdmin) {
+      throw new Error('Service role client not available')
+    }
+
     // Fetch all codes
-    const { data: codes, error } = await supabase
+    const { data: codes, error } = await supabaseAdmin
       .from('redemption_codes')
       .select(`
         id,
@@ -83,6 +92,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Check admin access
+    await checkAdminAccess(supabase)
+
+    // Use supabaseAdmin to bypass RLS restrictions
+    if (!supabaseAdmin) {
+      throw new Error('Service role client not available')
+    }
+
     // Generate random code
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
     let code = ''
@@ -90,7 +107,7 @@ export async function POST(request: NextRequest) {
       code += characters.charAt(Math.floor(Math.random() * characters.length))
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('redemption_codes')
       .insert({
         code,
@@ -165,14 +182,22 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Check admin access
+    await checkAdminAccess(supabase)
+
+    // Use supabaseAdmin to bypass RLS restrictions
+    if (!supabaseAdmin) {
+      throw new Error('Service role client not available')
+    }
+
     // Get code details before deletion for audit log
-    const { data: codeData } = await supabase
+    const { data: codeData } = await supabaseAdmin
       .from('redemption_codes')
       .select('*')
       .eq('id', id)
       .single()
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('redemption_codes')
       .delete()
       .eq('id', id)

@@ -3,7 +3,8 @@
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/client'
+import { createServerClient, supabaseAdmin } from '@/lib/supabase/client'
+import { checkAdminAccess } from '@/lib/utils/check-admin'
 import { createSettingsVersion } from '@/lib/audit/settings-versioning'
 import { logSettingsChange, extractRequestContext } from '@/lib/audit/audit-logger'
 
@@ -14,7 +15,15 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerClient()
 
-    const { data, error } = await supabase
+    // Check admin access
+    await checkAdminAccess(supabase)
+
+    // Use supabaseAdmin to bypass RLS restrictions
+    if (!supabaseAdmin) {
+      throw new Error('Service role client not available')
+    }
+
+    const { data, error } = await supabaseAdmin
       .from('referral_settings')
       .select('*')
       .limit(1)
@@ -59,8 +68,16 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Check admin access
+    await checkAdminAccess(supabase)
+
+    // Use supabaseAdmin to bypass RLS restrictions
+    if (!supabaseAdmin) {
+      throw new Error('Service role client not available')
+    }
+
     // Get current settings for audit comparison
-    const { data: currentSettings } = await supabase
+    const { data: currentSettings } = await supabaseAdmin
       .from('referral_settings')
       .select('*')
       .limit(1)
@@ -116,7 +133,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Update main referral_settings table
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('referral_settings')
       .update({
         reward_type: body.rewardType || 'requests',

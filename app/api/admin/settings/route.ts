@@ -3,7 +3,8 @@
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/client'
+import { createServerClient, supabaseAdmin } from '@/lib/supabase/client'
+import { checkAdminAccess } from '@/lib/utils/check-admin'
 import { logPlatformSettingsChange, extractRequestContext } from '@/lib/audit/audit-logger'
 
 export const dynamic = 'force-dynamic'
@@ -15,7 +16,15 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerClient()
 
-    const { data, error } = await supabase
+    // Check admin access
+    await checkAdminAccess(supabase)
+
+    // Use supabaseAdmin to bypass RLS restrictions
+    if (!supabaseAdmin) {
+      throw new Error('Service role client not available')
+    }
+
+    const { data, error } = await supabaseAdmin
       .from('platform_settings')
       .select('*')
       .eq('id', PLATFORM_SETTINGS_ID)
@@ -57,8 +66,16 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Check admin access
+    await checkAdminAccess(supabase)
+
+    // Use supabaseAdmin to bypass RLS restrictions
+    if (!supabaseAdmin) {
+      throw new Error('Service role client not available')
+    }
+
     // Get current settings for audit comparison
-    const { data: currentSettings } = await supabase
+    const { data: currentSettings } = await supabaseAdmin
       .from('platform_settings')
       .select('*')
       .eq('id', PLATFORM_SETTINGS_ID)
@@ -90,7 +107,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Update platform settings
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('platform_settings')
       .update({
         maintenance_mode: newSettings.maintenanceMode,
