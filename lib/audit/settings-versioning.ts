@@ -3,14 +3,18 @@
 // ============================================================================
 // Helper functions to manage referral settings versioning
 
-import { createServerClient } from '@/lib/supabase/client'
+import { supabaseAdmin } from '@/lib/supabase/client'
 
 export interface ReferralSettings {
+  rewardType?: 'requests' | 'credits'
   referrerRewardType: 'fixed' | 'percentage'
   referrerRewardValue: number
   refereeRewardType: 'fixed' | 'percentage'
   refereeRewardValue: number
+  referrerRequests?: number
+  refereeRequests?: number
   minPurchaseAmount: number
+  minQualifyingRequests?: number
   enabled: boolean
 }
 
@@ -37,10 +41,14 @@ export async function createSettingsVersion(
   reason?: string
 ): Promise<{ version: number; entry: ReferralSettingsHistory } | null> {
   try {
-    const supabase = await createServerClient()
+    // Use supabaseAdmin to bypass RLS restrictions
+    if (!supabaseAdmin) {
+      console.error('Service role client not available')
+      return null
+    }
 
     // Get next version number
-    const { data: versionData, error: versionError } = await supabase.rpc(
+    const { data: versionData, error: versionError } = await supabaseAdmin.rpc(
       'get_next_settings_version'
     )
 
@@ -52,15 +60,19 @@ export async function createSettingsVersion(
     const nextVersion = versionData as number
 
     // Insert new version
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('referral_settings_history')
       .insert({
         version: nextVersion,
+        reward_type: newSettings.rewardType || 'requests',
         referrer_reward_type: newSettings.referrerRewardType,
         referrer_reward_value: newSettings.referrerRewardValue,
         referee_reward_type: newSettings.refereeRewardType,
         referee_reward_value: newSettings.refereeRewardValue,
+        referrer_requests: newSettings.referrerRequests || 1000,
+        referee_requests: newSettings.refereeRequests || 500,
         min_purchase_amount: newSettings.minPurchaseAmount,
+        min_qualifying_requests: newSettings.minQualifyingRequests || 10,
         enabled: newSettings.enabled,
         changed_by: changedBy,
         change_reason: reason || null,
@@ -79,11 +91,15 @@ export async function createSettingsVersion(
       entry: {
         id: data.id,
         version: data.version,
+        rewardType: data.reward_type || 'requests',
         referrerRewardType: data.referrer_reward_type,
         referrerRewardValue: parseFloat(data.referrer_reward_value),
         refereeRewardType: data.referee_reward_type,
         refereeRewardValue: parseFloat(data.referee_reward_value),
+        referrerRequests: data.referrer_requests || 1000,
+        refereeRequests: data.referee_requests || 500,
         minPurchaseAmount: parseFloat(data.min_purchase_amount),
+        minQualifyingRequests: data.min_qualifying_requests || 10,
         enabled: data.enabled,
         changedBy: data.changed_by,
         changeReason: data.change_reason,
@@ -104,9 +120,13 @@ export async function createSettingsVersion(
  */
 export async function getCurrentSettingsVersion(): Promise<ReferralSettingsHistory | null> {
   try {
-    const supabase = await createServerClient()
+    // Use supabaseAdmin to bypass RLS restrictions
+    if (!supabaseAdmin) {
+      console.error('Service role client not available')
+      return null
+    }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('referral_settings_history')
       .select('*')
       .order('version', { ascending: false })
@@ -121,11 +141,15 @@ export async function getCurrentSettingsVersion(): Promise<ReferralSettingsHisto
     return {
       id: data.id,
       version: data.version,
+      rewardType: data.reward_type || 'requests',
       referrerRewardType: data.referrer_reward_type,
       referrerRewardValue: parseFloat(data.referrer_reward_value),
       refereeRewardType: data.referee_reward_type,
       refereeRewardValue: parseFloat(data.referee_reward_value),
+      referrerRequests: data.referrer_requests || 1000,
+      refereeRequests: data.referee_requests || 500,
       minPurchaseAmount: parseFloat(data.min_purchase_amount),
+      minQualifyingRequests: data.min_qualifying_requests || 10,
       enabled: data.enabled,
       changedBy: data.changed_by,
       changeReason: data.change_reason,
@@ -148,9 +172,13 @@ export async function getSettingsVersion(
   version: number
 ): Promise<ReferralSettingsHistory | null> {
   try {
-    const supabase = await createServerClient()
+    // Use supabaseAdmin to bypass RLS restrictions
+    if (!supabaseAdmin) {
+      console.error('Service role client not available')
+      return null
+    }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('referral_settings_history')
       .select('*')
       .eq('version', version)
@@ -164,11 +192,15 @@ export async function getSettingsVersion(
     return {
       id: data.id,
       version: data.version,
+      rewardType: data.reward_type || 'requests',
       referrerRewardType: data.referrer_reward_type,
       referrerRewardValue: parseFloat(data.referrer_reward_value),
       refereeRewardType: data.referee_reward_type,
       refereeRewardValue: parseFloat(data.referee_reward_value),
+      referrerRequests: data.referrer_requests || 1000,
+      refereeRequests: data.referee_requests || 500,
       minPurchaseAmount: parseFloat(data.min_purchase_amount),
+      minQualifyingRequests: data.min_qualifying_requests || 10,
       enabled: data.enabled,
       changedBy: data.changed_by,
       changeReason: data.change_reason,
@@ -193,9 +225,13 @@ export async function getAllSettingsVersions(
   offset: number = 0
 ): Promise<ReferralSettingsHistory[]> {
   try {
-    const supabase = await createServerClient()
+    // Use supabaseAdmin to bypass RLS restrictions
+    if (!supabaseAdmin) {
+      console.error('Service role client not available')
+      return []
+    }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('referral_settings_history')
       .select('*')
       .order('version', { ascending: false })
@@ -209,11 +245,15 @@ export async function getAllSettingsVersions(
     return data.map((item) => ({
       id: item.id,
       version: item.version,
+      rewardType: item.reward_type || 'requests',
       referrerRewardType: item.referrer_reward_type,
       referrerRewardValue: parseFloat(item.referrer_reward_value),
       refereeRewardType: item.referee_reward_type,
       refereeRewardValue: parseFloat(item.referee_reward_value),
+      referrerRequests: item.referrer_requests || 1000,
+      refereeRequests: item.referee_requests || 500,
       minPurchaseAmount: parseFloat(item.min_purchase_amount),
+      minQualifyingRequests: item.min_qualifying_requests || 10,
       enabled: item.enabled,
       changedBy: item.changed_by,
       changeReason: item.change_reason,
@@ -234,11 +274,15 @@ export async function getAllSettingsVersions(
  */
 export function createSettingsSnapshot(settings: ReferralSettings) {
   return {
+    reward_type: settings.rewardType || 'requests',
     referrer_reward_type: settings.referrerRewardType,
     referrer_reward_value: settings.referrerRewardValue,
     referee_reward_type: settings.refereeRewardType,
     referee_reward_value: settings.refereeRewardValue,
+    referrer_requests: settings.referrerRequests || 1000,
+    referee_requests: settings.refereeRequests || 500,
     min_purchase_amount: settings.minPurchaseAmount,
+    min_qualifying_requests: settings.minQualifyingRequests || 10,
     enabled: settings.enabled,
   }
 }
@@ -261,11 +305,15 @@ export function compareSettingsVersions(
   }> = []
 
   const fields: Array<keyof ReferralSettings> = [
+    'rewardType',
     'referrerRewardType',
     'referrerRewardValue',
     'refereeRewardType',
     'refereeRewardValue',
+    'referrerRequests',
+    'refereeRequests',
     'minPurchaseAmount',
+    'minQualifyingRequests',
     'enabled',
   ]
 

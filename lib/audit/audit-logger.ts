@@ -3,7 +3,7 @@
 // ============================================================================
 // Helper functions to log admin actions to the admin_audit_log table
 
-import { createServerClient } from '@/lib/supabase/client'
+import { supabaseAdmin } from '@/lib/supabase/client'
 
 export type ActionType = 'create' | 'update' | 'delete' | 'activate' | 'deactivate'
 
@@ -38,9 +38,13 @@ export interface LogAdminActionParams {
  */
 export async function logAdminAction(params: LogAdminActionParams) {
   try {
-    const supabase = await createServerClient()
+    // Use supabaseAdmin to bypass RLS restrictions
+    if (!supabaseAdmin) {
+      console.error('Service role client not available')
+      return null
+    }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('admin_audit_log')
       .insert({
         admin_user_id: params.adminUserId,
