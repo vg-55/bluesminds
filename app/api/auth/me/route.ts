@@ -3,7 +3,7 @@
 // ============================================================================
 
 import { NextRequest } from 'next/server'
-import { createServerClient } from '@/lib/supabase/client'
+import { createServerClient, supabaseAdmin } from '@/lib/supabase/client'
 import { errorResponse, successResponse, AuthenticationError } from '@/lib/utils/errors'
 import { logger } from '@/lib/utils/logger'
 import { ensureUserProfile } from '@/lib/utils/ensure-user-profile'
@@ -23,8 +23,10 @@ export async function GET(request: NextRequest) {
       throw new AuthenticationError('Not authenticated')
     }
 
-    // Ensure user profile exists
-    await ensureUserProfile(supabase, authUser.id)
+    // Ensure user profile exists (using admin client)
+    if (supabaseAdmin) {
+      await ensureUserProfile(supabaseAdmin, authUser.id)
+    }
 
     // Get user profile
     const { data: profile, error: profileError } = await supabase
@@ -70,8 +72,10 @@ export async function PATCH(request: NextRequest) {
       throw new AuthenticationError('Not authenticated')
     }
 
-    // Ensure user profile exists
-    await ensureUserProfile(supabase, authUser.id)
+    // Ensure user profile exists (using admin client)
+    if (supabaseAdmin) {
+      await ensureUserProfile(supabaseAdmin, authUser.id)
+    }
 
     // Parse request body
     const body = await request.json()

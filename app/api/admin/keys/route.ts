@@ -4,8 +4,9 @@
 // Fetch all API keys across all users for admin monitoring
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/client'
+import { createServerClient, supabaseAdmin } from '@/lib/supabase/client'
 import { ensureUserProfile } from '@/lib/utils/ensure-user-profile'
+import { checkAdminAccess } from '@/lib/utils/check-admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,28 +14,16 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerClient()
 
-    // Check authentication
+    // Check admin access using centralized function
+    await checkAdminAccess(supabase)
+
+    // Ensure user profile exists in database (using admin client)
     const {
       data: { user },
-      error: authError,
     } = await supabase.auth.getUser()
 
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Ensure user profile exists in database
-    await ensureUserProfile(supabase, user.id)
-
-    // Verify admin role
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile || profile.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (user && supabaseAdmin) {
+      await ensureUserProfile(supabaseAdmin, user.id)
     }
 
     // Fetch all API keys with user information

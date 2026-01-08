@@ -4,9 +4,10 @@
 // Endpoint for users to view their referral stats and list
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/client'
+import { createServerClient, supabaseAdmin } from '@/lib/supabase/client'
 import { errorResponse, successResponse, AuthenticationError } from '@/lib/utils/errors'
 import { logger } from '@/lib/utils/logger'
+import { ensureUserProfile } from '@/lib/utils/ensure-user-profile'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,6 +24,11 @@ export async function GET(request: NextRequest) {
 
     if (authError || !authUser) {
       throw new AuthenticationError('Not authenticated')
+    }
+
+    // Ensure user profile exists (using admin client)
+    if (supabaseAdmin) {
+      await ensureUserProfile(supabaseAdmin, authUser.id)
     }
 
     // Get user profile with referral code and free requests

@@ -1,37 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, supabaseAdmin } from '@/lib/supabase/client';
-
-// Check if user is admin
-async function checkAdminAccess(supabase: Awaited<ReturnType<typeof createServerClient>>) {
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  // Check user role from database
-  const { data: profile, error: profileError } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (profileError || !profile || profile.role !== 'admin') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  return null;
-}
+import { checkAdminAccess } from '@/lib/utils/check-admin';
 
 // GET /api/admin/models - List all custom models
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerClient();
-    const authError = await checkAdminAccess(supabase);
-    if (authError) return authError;
+
+    // Check admin access using centralized function
+    await checkAdminAccess(supabase);
 
     if (!supabaseAdmin) {
       return NextResponse.json(
@@ -73,8 +50,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerClient();
-    const authError = await checkAdminAccess(supabase);
-    if (authError) return authError;
+
+    // Check admin access using centralized function
+    await checkAdminAccess(supabase);
 
     const body = await request.json();
     const {
@@ -154,8 +132,9 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const supabase = await createServerClient();
-    const authError = await checkAdminAccess(supabase);
-    if (authError) return authError;
+
+    // Check admin access using centralized function
+    await checkAdminAccess(supabase);
 
     const body = await request.json();
     const { id, ...updates } = body;
@@ -203,8 +182,9 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const supabase = await createServerClient();
-    const authError = await checkAdminAccess(supabase);
-    if (authError) return authError;
+
+    // Check admin access using centralized function
+    await checkAdminAccess(supabase);
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

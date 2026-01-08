@@ -42,6 +42,15 @@ export default async function DashboardPage() {
     }
   }
 
+  // Check if referral program is enabled
+  const { data: referralSettings } = await supabase
+    .from('referral_settings')
+    .select('enabled')
+    .limit(1)
+    .single()
+
+  const referralsEnabled = referralSettings?.enabled ?? false
+
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -66,10 +75,12 @@ export default async function DashboardPage() {
         <RecentRequests userId={user.id} />
       </div>
 
-      {/* Referral Section */}
-      <div className="pt-4">
-        <ReferralSection userId={user.id} />
-      </div>
+      {/* Referral Section - Only show if enabled */}
+      {referralsEnabled && (
+        <div className="pt-4">
+          <ReferralSection userId={user.id} />
+        </div>
+      )}
     </div>
   )
 }

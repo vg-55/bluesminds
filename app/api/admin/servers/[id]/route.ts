@@ -6,30 +6,12 @@ import { NextRequest } from 'next/server'
 import { createServerClient, supabaseAdmin } from '@/lib/supabase/client'
 import { getServer } from '@/lib/gateway/load-balancer'
 import { updateServerSchema } from '@/lib/validations'
-import { errorResponse, successResponse, ValidationError, AuthenticationError, AuthorizationError, ServerError } from '@/lib/utils/errors'
+import { errorResponse, successResponse, ValidationError, ServerError } from '@/lib/utils/errors'
 import { logger } from '@/lib/utils/logger'
-import { adminEmails } from '@/lib/config/env'
+import { checkAdminAccess } from '@/lib/utils/check-admin'
 
 interface RouteContext {
   params: Promise<{ id: string }>
-}
-
-// Check if user is admin
-async function checkAdminAccess(supabase: Awaited<ReturnType<typeof createServerClient>>) {
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    throw new AuthenticationError('Not authenticated')
-  }
-
-  if (!adminEmails.includes(user.email || '')) {
-    throw new AuthorizationError('Admin access required')
-  }
-
-  return user
 }
 
 // GET /api/admin/servers/[id]

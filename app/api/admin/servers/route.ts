@@ -6,34 +6,9 @@ import { NextRequest } from 'next/server'
 import { createServerClient, supabaseAdmin } from '@/lib/supabase/client'
 import { getAllServers } from '@/lib/gateway/load-balancer'
 import { createServerSchema } from '@/lib/validations'
-import { errorResponse, successResponse, ValidationError, AuthenticationError, AuthorizationError } from '@/lib/utils/errors'
+import { errorResponse, successResponse, ValidationError } from '@/lib/utils/errors'
 import { logger } from '@/lib/utils/logger'
-import { adminEmails } from '@/lib/config/env'
-
-// Check if user is admin
-async function checkAdminAccess(supabase: Awaited<ReturnType<typeof createServerClient>>) {
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    throw new AuthenticationError('Not authenticated')
-  }
-
-  // Check user role from database
-  const { data: profile, error: profileError } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (profileError || !profile || profile.role !== 'admin') {
-    throw new AuthorizationError('Admin access required')
-  }
-
-  return user
-}
+import { checkAdminAccess } from '@/lib/utils/check-admin'
 
 // GET /api/admin/servers - List all servers
 export async function GET(request: NextRequest) {

@@ -1,4 +1,19 @@
-// Authentication utilities using Supabase
+// ============================================================================
+// LEGACY CLIENT-SIDE AUTHENTICATION UTILITIES
+// ============================================================================
+// ⚠️ DEPRECATION NOTICE:
+// This file contains legacy client-side authentication utilities.
+// These functions assume user profiles already exist in the database.
+//
+// RECOMMENDED APPROACH:
+// - For login: Use /api/auth/login endpoint
+// - For signup: Use /api/auth/signup endpoint
+// - For current user: Use /api/auth/me endpoint
+// - For logout: Use /api/auth/logout endpoint
+//
+// API routes handle profile synchronization automatically, which this
+// client-side library cannot do (requires server-side admin access).
+// ============================================================================
 
 import { createBrowserClient, supabaseAdmin } from './supabase/client'
 
@@ -54,11 +69,11 @@ export const auth = {
     return {
       id: profile.id,
       email: profile.email,
-      name: profile.name || profile.email,
+      name: profile.full_name || profile.email,
       avatar: profile.avatar_url,
       role: profile.role || 'user',
       createdAt: new Date(profile.created_at),
-      requestBalance: profile.request_balance || 0,
+      requestBalance: profile.free_requests_balance || 0,
       referralCode: profile.referral_code,
     };
   },
@@ -103,11 +118,11 @@ export const auth = {
     return {
       id: profile.id,
       email: profile.email,
-      name: profile.name || profile.email,
+      name: profile.full_name || profile.email,
       avatar: profile.avatar_url,
       role: profile.role || 'user',
       createdAt: new Date(profile.created_at),
-      requestBalance: profile.request_balance || 0,
+      requestBalance: profile.free_requests_balance || 0,
       referralCode: profile.referral_code,
     };
   },
@@ -143,11 +158,11 @@ export const auth = {
     return {
       id: profile.id,
       email: profile.email,
-      name: profile.name || profile.email,
+      name: profile.full_name || profile.email,
       avatar: profile.avatar_url,
       role: profile.role || 'user',
       createdAt: new Date(profile.created_at),
-      requestBalance: profile.request_balance || 0,
+      requestBalance: profile.free_requests_balance || 0,
       referralCode: profile.referral_code,
     };
   },

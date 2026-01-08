@@ -45,11 +45,18 @@ export const modelPricingRequests: Record<string, number> = {
   'gpt-4o': 0.005,
   'gpt-3.5-turbo': 0.005,
 
-  // Anthropic
+  // Anthropic Claude 3 series
   'claude-3-opus-20240229': 0.015,
   'claude-3-sonnet-20240229': 0.008,
   'claude-3-haiku-20240307': 0.003,
   'claude-3-5-sonnet-20241022': 0.008,
+
+  // Anthropic Claude 4 series (newer models)
+  'claude-opus-4': 0.015,
+  'claude-opus-4.5': 0.015,
+  'claude-sonnet-4': 0.008,
+  'claude-sonnet-4.5': 0.008,
+  'claude-haiku-4': 0.003,
 
   // Google
   'gemini-pro': 0.002,
@@ -62,14 +69,17 @@ export const modelPricingRequests: Record<string, number> = {
 
 // Get pricing for a model (with fallback to default)
 export function getModelPricingRequest(model: string): number {
+  // Strip provider prefix if present (e.g., "code/claude-opus-4.5" -> "claude-opus-4.5")
+  const cleanModel = model.includes('/') ? model.split('/').pop() || model : model
+
   // Try exact match first
-  if (model in modelPricingRequests) {
-    return modelPricingRequests[model]
+  if (cleanModel in modelPricingRequests) {
+    return modelPricingRequests[cleanModel]
   }
 
   // Try partial match (e.g., "gpt-4-0613" -> "gpt-4")
   const baseModel = Object.keys(modelPricingRequests).find((key) =>
-    model.startsWith(key)
+    cleanModel.startsWith(key)
   )
   if (baseModel) {
     return modelPricingRequests[baseModel]
@@ -84,6 +94,21 @@ export function calculateCostByRequest(model: string): number {
   return getModelPricingRequest(model)
 }
 
+// Calculate cost with hybrid approach - uses token-based when available, otherwise per-request
+export function calculateCostHybrid(
+  model: string,
+  promptTokens: number,
+  completionTokens: number
+): number {
+  // If we have token counts, use token-based pricing for accuracy
+  if (promptTokens > 0 || completionTokens > 0) {
+    return calculateCost(model, promptTokens, completionTokens)
+  }
+
+  // Otherwise fall back to per-request pricing
+  return calculateCostByRequest(model)
+}
+
 // ============================================================================
 // TOKEN-BASED PRICING (Legacy - kept for analytics only)
 // ============================================================================
@@ -96,11 +121,18 @@ export const modelPricing: Record<string, { input: number; output: number }> = {
   'gpt-4o': { input: 0.005, output: 0.015 },
   'gpt-3.5-turbo': { input: 0.0005, output: 0.0015 },
 
-  // Anthropic
+  // Anthropic Claude 3 series
   'claude-3-opus-20240229': { input: 0.015, output: 0.075 },
   'claude-3-sonnet-20240229': { input: 0.003, output: 0.015 },
   'claude-3-haiku-20240307': { input: 0.00025, output: 0.00125 },
   'claude-3-5-sonnet-20241022': { input: 0.003, output: 0.015 },
+
+  // Anthropic Claude 4 series (newer models)
+  'claude-opus-4': { input: 0.015, output: 0.075 },
+  'claude-opus-4.5': { input: 0.015, output: 0.075 },
+  'claude-sonnet-4': { input: 0.003, output: 0.015 },
+  'claude-sonnet-4.5': { input: 0.003, output: 0.015 },
+  'claude-haiku-4': { input: 0.00025, output: 0.00125 },
 
   // Google
   'gemini-pro': { input: 0.00025, output: 0.0005 },
@@ -113,13 +145,16 @@ export const modelPricing: Record<string, { input: number; output: number }> = {
 
 // Get pricing for a model (with fallback to default)
 export function getModelPricing(model: string): { input: number; output: number } {
+  // Strip provider prefix if present (e.g., "code/claude-opus-4.5" -> "claude-opus-4.5")
+  const cleanModel = model.includes('/') ? model.split('/').pop() || model : model
+
   // Try exact match first
-  if (model in modelPricing) {
-    return modelPricing[model]
+  if (cleanModel in modelPricing) {
+    return modelPricing[cleanModel]
   }
 
   // Try partial match (e.g., "gpt-4-0613" -> "gpt-4")
-  const baseModel = Object.keys(modelPricing).find((key) => model.startsWith(key))
+  const baseModel = Object.keys(modelPricing).find((key) => cleanModel.startsWith(key))
   if (baseModel) {
     return modelPricing[baseModel]
   }

@@ -35,6 +35,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [referralsEnabled, setReferralsEnabled] = useState(false)
 
   // Form state
   const [fullName, setFullName] = useState('')
@@ -42,6 +43,11 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadProfile()
+    // Check if referral program is enabled
+    fetch('/api/referrals/enabled')
+      .then(res => res.json())
+      .then(data => setReferralsEnabled(data.enabled))
+      .catch(() => setReferralsEnabled(false))
   }, [])
 
   const loadProfile = async () => {
@@ -251,7 +257,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {profile?.referral_code && (
+          {referralsEnabled && profile?.referral_code && (
             <div className="flex items-center justify-between p-3 rounded-lg bg-foreground/[0.02] border border-foreground/10">
               <span className="text-sm text-foreground/60">Referral Code</span>
               <span className="px-3 py-1 rounded text-xs font-mono bg-foreground/5 text-foreground border border-foreground/10">

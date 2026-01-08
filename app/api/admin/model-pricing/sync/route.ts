@@ -3,9 +3,11 @@
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/client'
+import { createServerClient, supabaseAdmin } from '@/lib/supabase/client'
 import { errorResponse } from '@/lib/utils/errors'
 import { logger } from '@/lib/utils/logger'
+import { checkAdminAccess } from '@/lib/utils/check-admin'
+import { ensureUserProfile } from '@/lib/utils/ensure-user-profile'
 
 interface AvailableModel {
   model_name: string
@@ -20,24 +22,13 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerClient()
 
-    // Check authentication
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    // Check admin access using centralized function
+    await checkAdminAccess(supabase)
 
-    if (!user) {
-      return errorResponse('Unauthorized', 401)
-    }
-
-    // Check if user is admin
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profile?.role !== 'admin') {
-      return errorResponse('Forbidden: Admin access required', 403)
+    // Ensure user profile exists (using admin client)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user && supabaseAdmin) {
+      await ensureUserProfile(supabaseAdmin, user.id)
     }
 
     // 1. Fetch all active LiteLLM servers and their supported models
@@ -139,24 +130,13 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerClient()
 
-    // Check authentication
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    // Check admin access using centralized function
+    await checkAdminAccess(supabase)
 
-    if (!user) {
-      return errorResponse('Unauthorized', 401)
-    }
-
-    // Check if user is admin
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profile?.role !== 'admin') {
-      return errorResponse('Forbidden: Admin access required', 403)
+    // Ensure user profile exists (using admin client)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user && supabaseAdmin) {
+      await ensureUserProfile(supabaseAdmin, user.id)
     }
 
     // Parse request body

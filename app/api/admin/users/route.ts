@@ -1,30 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase/client';
+import { createServerClient, supabaseAdmin } from '@/lib/supabase/client';
 import { ensureUserProfile } from '@/lib/utils/ensure-user-profile';
+import { checkAdminAccess } from '@/lib/utils/check-admin';
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerClient();
 
-    // Check if user is authenticated and is admin
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Check admin access using centralized function
+    await checkAdminAccess(supabase);
 
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Ensure user profile exists in database
-    await ensureUserProfile(supabase, user.id);
-
-    // Check if user is admin
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile || profile.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // Ensure user profile exists in database (using admin client)
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && supabaseAdmin) {
+      await ensureUserProfile(supabaseAdmin, user.id);
     }
 
     // Fetch all users
@@ -51,25 +40,13 @@ export async function PATCH(request: NextRequest) {
   try {
     const supabase = await createServerClient();
 
-    // Check if user is authenticated and is admin
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Check admin access using centralized function
+    await checkAdminAccess(supabase);
 
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Ensure user profile exists in database
-    await ensureUserProfile(supabase, user.id);
-
-    // Check if user is admin
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile || profile.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // Ensure user profile exists in database (using admin client)
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && supabaseAdmin) {
+      await ensureUserProfile(supabaseAdmin, user.id);
     }
 
     const body = await request.json();
@@ -108,25 +85,13 @@ export async function DELETE(request: NextRequest) {
   try {
     const supabase = await createServerClient();
 
-    // Check if user is authenticated and is admin
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Check admin access using centralized function
+    await checkAdminAccess(supabase);
 
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Ensure user profile exists in database
-    await ensureUserProfile(supabase, user.id);
-
-    // Check if user is admin
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile || profile.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // Ensure user profile exists in database (using admin client)
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && supabaseAdmin) {
+      await ensureUserProfile(supabaseAdmin, user.id);
     }
 
     const { searchParams } = new URL(request.url);

@@ -74,10 +74,12 @@ export function DashboardNav({
   userTier,
   userEmail,
   isAdmin = false,
+  referralsEnabled = true,
 }: {
   userTier: string
   userEmail: string
   isAdmin?: boolean
+  referralsEnabled?: boolean
 }) {
   const pathname = usePathname()
 
@@ -87,6 +89,9 @@ export function DashboardNav({
         {navItems.map((item) => {
           // Hide admin items for non-admins
           if (item.adminOnly && !isAdmin) return null
+
+          // Hide referrals if not enabled
+          if (item.href === '/dashboard/referrals' && !referralsEnabled) return null
 
           const isActive = pathname === item.href
           const Icon = item.icon

@@ -4,7 +4,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { logger } from '@/lib/utils/logger'
-import { calculateCostByRequest } from '@/lib/config/app'
+import { calculateCostByRequest, calculateCostHybrid } from '@/lib/config/app'
 import { generateRequestId } from '@/lib/utils/crypto'
 import type { UsageLogInsert } from '@/lib/types'
 
@@ -31,8 +31,13 @@ export async function logUsage(data: UsageData): Promise<string> {
   try {
     const requestId = generateRequestId()
 
-    // NEW: Calculate cost per request (not per token) for billing
-    const cost = calculateCostByRequest(data.model)
+    // HYBRID: Use token-based pricing when tokens available, otherwise per-request
+    // This provides more accurate cost calculation
+    const cost = calculateCostHybrid(
+      data.model,
+      data.promptTokens,
+      data.completionTokens
+    )
 
     const usageLog: UsageLogInsert = {
       user_id: data.userId,
@@ -75,8 +80,12 @@ export async function logUsageBatch(records: UsageData[]): Promise<void> {
   try {
     const usageLogs: UsageLogInsert[] = records.map((data) => {
       const requestId = generateRequestId()
-      // NEW: Calculate cost per request (not per token)
-      const cost = calculateCostByRequest(data.model)
+      // HYBRID: Use token-based pricing when tokens available, otherwise per-request
+      const cost = calculateCostHybrid(
+        data.model,
+        data.promptTokens,
+        data.completionTokens
+      )
 
       return {
         user_id: data.userId,
