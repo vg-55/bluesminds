@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase/client';
+import { createServerClient, supabaseAdmin } from '@/lib/supabase/client';
 import { checkAdminAccess } from '@/lib/utils/check-admin';
 
 export async function GET(request: NextRequest) {
@@ -9,34 +9,39 @@ export async function GET(request: NextRequest) {
     // Check admin access using centralized function
     await checkAdminAccess(supabase);
 
+    // Use supabaseAdmin to bypass RLS restrictions
+    if (!supabaseAdmin) {
+      throw new Error('Service role client not available');
+    }
+
     // Fetch statistics
     // Total users count
-    const { count: totalUsers } = await supabase
+    const { count: totalUsers } = await supabaseAdmin
       .from('users')
       .select('*', { count: 'exact', head: true });
 
     // Users created this week
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    const { count: usersThisWeek } = await supabase
+    const { count: usersThisWeek } = await supabaseAdmin
       .from('users')
       .select('*', { count: 'exact', head: true })
       .gte('created_at', oneWeekAgo.toISOString());
 
     // Total API keys
-    const { count: totalApiKeys } = await supabase
+    const { count: totalApiKeys } = await supabaseAdmin
       .from('api_keys')
       .select('*', { count: 'exact', head: true })
       .eq('is_active', true);
 
     // Active LiteLLM servers
-    const { count: activeServers } = await supabase
+    const { count: activeServers } = await supabaseAdmin
       .from('litellm_servers')
       .select('*', { count: 'exact', head: true })
       .eq('is_active', true);
 
     // Recent users (last 5)
-    const { data: recentUsers } = await supabase
+    const { data: recentUsers } = await supabaseAdmin
       .from('users')
       .select('id, email, full_name, tier, created_at')
       .order('created_at', { ascending: false })

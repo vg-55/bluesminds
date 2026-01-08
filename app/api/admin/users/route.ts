@@ -16,8 +16,13 @@ export async function GET(request: NextRequest) {
       await ensureUserProfile(supabaseAdmin, user.id);
     }
 
-    // Fetch all users
-    const { data: users, error } = await supabase
+    // CRITICAL FIX: Use supabaseAdmin to bypass RLS and fetch ALL users
+    // Regular client is RLS-restricted and can only see own profile
+    if (!supabaseAdmin) {
+      throw new Error('Service role client not available');
+    }
+
+    const { data: users, error } = await supabaseAdmin
       .from('users')
       .select('*')
       .order('created_at', { ascending: false });
@@ -59,8 +64,13 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // Use supabaseAdmin to bypass RLS restrictions
+    if (!supabaseAdmin) {
+      throw new Error('Service role client not available');
+    }
+
     // Update user status
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('users')
       .update({ status, updated_at: new Date().toISOString() })
       .eq('id', userId)
@@ -104,8 +114,13 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // Use supabaseAdmin to bypass RLS restrictions
+    if (!supabaseAdmin) {
+      throw new Error('Service role client not available');
+    }
+
     // Soft delete by setting status to 'deleted'
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('users')
       .update({ status: 'deleted', updated_at: new Date().toISOString() })
       .eq('id', userId);

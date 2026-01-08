@@ -26,8 +26,13 @@ export async function GET(request: NextRequest) {
       await ensureUserProfile(supabaseAdmin, user.id)
     }
 
+    // Use supabaseAdmin to bypass RLS restrictions
+    if (!supabaseAdmin) {
+      throw new Error('Service role client not available')
+    }
+
     // Fetch all API keys with user information
-    const { data: apiKeys, error } = await supabase
+    const { data: apiKeys, error } = await supabaseAdmin
       .from('api_keys')
       .select(`
         id,
@@ -47,7 +52,7 @@ export async function GET(request: NextRequest) {
     if (error) throw error
 
     // Get usage counts for each API key
-    const { data: usageCounts } = await supabase
+    const { data: usageCounts } = await supabaseAdmin
       .from('usage_logs')
       .select('api_key_id')
 

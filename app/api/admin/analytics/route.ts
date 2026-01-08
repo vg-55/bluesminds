@@ -26,6 +26,11 @@ export async function GET(request: NextRequest) {
       await ensureUserProfile(supabaseAdmin, user.id)
     }
 
+    // Use supabaseAdmin to bypass RLS restrictions
+    if (!supabaseAdmin) {
+      throw new Error('Service role client not available')
+    }
+
     // Fetch platform statistics
     const [
       { count: totalUsers },
@@ -35,26 +40,26 @@ export async function GET(request: NextRequest) {
       { data: topUsers },
     ] = await Promise.all([
       // Total users
-      supabase.from('users').select('*', { count: 'exact', head: true }),
+      supabaseAdmin.from('users').select('*', { count: 'exact', head: true }),
 
       // Total API keys
-      supabase
+      supabaseAdmin
         .from('api_keys')
         .select('*', { count: 'exact', head: true })
         .eq('is_active', true),
 
       // Total requests from usage logs
-      supabase.from('usage_logs').select('*', { count: 'exact', head: true }),
+      supabaseAdmin.from('usage_logs').select('*', { count: 'exact', head: true }),
 
       // Recent usage logs for analytics
-      supabase
+      supabaseAdmin
         .from('usage_logs')
         .select('provider, cost_usd, total_tokens, created_at')
         .order('created_at', { ascending: false })
         .limit(1000),
 
       // Top users by request count
-      supabase
+      supabaseAdmin
         .from('users')
         .select(`
           id,
@@ -88,7 +93,7 @@ export async function GET(request: NextRequest) {
     }))
 
     // Calculate average latency
-    const { data: recentLogs } = await supabase
+    const { data: recentLogs } = await supabaseAdmin
       .from('usage_logs')
       .select('response_time_ms')
       .not('response_time_ms', 'is', null)
@@ -103,7 +108,7 @@ export async function GET(request: NextRequest) {
         : 0
 
     // Get usage counts per user for ranking
-    const { data: usageByUser } = await supabase
+    const { data: usageByUser } = await supabaseAdmin
       .from('usage_logs')
       .select('user_id, total_tokens, cost_usd')
 
