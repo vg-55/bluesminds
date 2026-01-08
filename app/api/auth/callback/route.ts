@@ -7,6 +7,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { env } from '@/lib/config/env'
 import { logger } from '@/lib/utils/logger'
+import { createReferral } from '@/lib/utils/create-referral'
 import type { Database } from '@/lib/types/database.types'
 
 export async function GET(request: NextRequest) {
@@ -75,25 +76,8 @@ export async function GET(request: NextRequest) {
 
           // Check for referral code in cookies
           const referralCode = cookieStore.get('referral_code')?.value
-          let referredBy: string | null = null
 
-          if (referralCode) {
-            // Look up the referrer by their referral code
-            const { data: referrer } = await supabase
-              .from('users')
-              .select('id')
-              .eq('referral_code', referralCode)
-              .single()
-
-            if (referrer) {
-              referredBy = referrer.id
-              logger.info('User referred by', { referralCode, referrerId: referrer.id })
-            }
-
-            // Clear the referral code cookie
-            cookieStore.delete('referral_code')
-          }
-
+          // Create user profile first
           const { error: createError } = await supabase.from('users').insert({
             id: authData.user.id,
             email: authData.user.email!,
@@ -101,12 +85,36 @@ export async function GET(request: NextRequest) {
             company_name: authData.user.user_metadata?.company_name || null,
             tier: 'free',
             status: 'active',
-            referred_by: referredBy,
           })
 
           if (createError) {
             logger.error('Failed to create user profile', createError)
             // Continue anyway - they can still use the service
+          } else {
+            // Create referral record if referral code was provided
+            if (referralCode) {
+              const referralResult = await createReferral({
+                referralCode: referralCode,
+                newUserId: authData.user.id,
+              })
+
+              if (referralResult.success) {
+                logger.info('Referral created during OAuth callback', {
+                  userId: authData.user.id,
+                  referrerId: referralResult.referrerId,
+                  referralCode,
+                })
+              } else {
+                logger.warn('Failed to create referral during OAuth callback', {
+                  userId: authData.user.id,
+                  referralCode,
+                  error: referralResult.error,
+                })
+              }
+
+              // Clear the referral code cookie
+              cookieStore.delete('referral_code')
+            }
           }
         }
 

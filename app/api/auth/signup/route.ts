@@ -9,6 +9,7 @@ import { env } from '@/lib/config/env'
 import { userSignupSchema } from '@/lib/validations'
 import { errorResponse, ValidationError } from '@/lib/utils/errors'
 import { logger } from '@/lib/utils/logger'
+import { createReferral } from '@/lib/utils/create-referral'
 import type { Database } from '@/lib/types/database.types'
 
 export async function POST(request: NextRequest) {
@@ -79,20 +80,31 @@ export async function POST(request: NextRequest) {
         company_name: company_name || null,
         tier: 'free',
         status: 'active',
-        referred_by: referral_code
-          ? (
-              await supabase
-                .from('users')
-                .select('id')
-                .eq('referral_code', referral_code)
-                .single()
-            ).data?.id || null
-          : null,
       })
 
       if (profileError) {
         logger.error('Failed to create user profile', profileError)
         // Don't throw - auth user was created successfully
+      } else {
+        // Create referral record if referral code was provided
+        if (referral_code) {
+          const referralResult = await createReferral({
+            referralCode: referral_code,
+            newUserId: authData.user.id,
+          })
+
+          if (referralResult.success) {
+            logger.info('Referral created during signup', {
+              userId: authData.user.id,
+              referrerId: referralResult.referrerId,
+            })
+          } else {
+            logger.warn('Failed to create referral during signup', {
+              userId: authData.user.id,
+              error: referralResult.error,
+            })
+          }
+        }
       }
     }
 

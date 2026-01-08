@@ -5,16 +5,21 @@
 // This is a public endpoint (no auth required) for signup/login pages
 
 import { NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/client'
+import { supabaseAdmin } from '@/lib/supabase/client'
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/referrals/enabled - Check if referral program is enabled
 export async function GET() {
   try {
-    const supabase = await createServerClient()
+    // Use supabaseAdmin because this is a public endpoint called by unauthenticated users
+    // RLS policies would block unauthenticated access to referral_settings
+    if (!supabaseAdmin) {
+      console.error('Service role client not available')
+      return NextResponse.json({ enabled: false })
+    }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('referral_settings')
       .select('enabled')
       .limit(1)
