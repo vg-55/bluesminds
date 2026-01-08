@@ -58,6 +58,8 @@ export async function PATCH(request: NextRequest) {
     const supabase = await createServerClient()
     const body = await request.json()
 
+    console.log('[PATCH /api/admin/referrals/settings] Request body:', body)
+
     // Get current user (admin)
     const {
       data: { user },
@@ -65,11 +67,15 @@ export async function PATCH(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
+      console.error('[PATCH /api/admin/referrals/settings] Auth error:', authError)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    console.log('[PATCH /api/admin/referrals/settings] User:', user.email)
+
     // Check admin access
     await checkAdminAccess(supabase)
+    console.log('[PATCH /api/admin/referrals/settings] Admin access confirmed')
 
     // Use supabaseAdmin to bypass RLS restrictions
     if (!supabaseAdmin) {
@@ -133,6 +139,12 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Update main referral_settings table
+    console.log('[PATCH /api/admin/referrals/settings] Updating settings with:', {
+      enabled: body.enabled,
+      rewardType: body.rewardType,
+      settingsId: currentSettings.id,
+    })
+
     const { data, error } = await supabaseAdmin
       .from('referral_settings')
       .update({
@@ -152,7 +164,15 @@ export async function PATCH(request: NextRequest) {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('[PATCH /api/admin/referrals/settings] Update error:', error)
+      throw error
+    }
+
+    console.log('[PATCH /api/admin/referrals/settings] Settings updated successfully:', {
+      enabled: data.enabled,
+      rewardType: data.reward_type,
+    })
 
     // Log the change to audit log
     const { ipAddress, userAgent } = extractRequestContext(request)
@@ -164,7 +184,7 @@ export async function PATCH(request: NextRequest) {
       userAgent,
     })
 
-    return NextResponse.json({
+    const response = {
       rewardType: data.reward_type || 'requests',
       referrerRewardType: data.referrer_reward_type,
       referrerRewardValue: parseFloat(data.referrer_reward_value || 0),
@@ -176,11 +196,15 @@ export async function PATCH(request: NextRequest) {
       minQualifyingRequests: data.min_qualifying_requests || 10,
       enabled: data.enabled,
       version: versionResult.version,
-    })
+    }
+
+    console.log('[PATCH /api/admin/referrals/settings] Sending response:', response)
+    return NextResponse.json(response)
   } catch (error) {
-    console.error('Error updating referral settings:', error)
+    console.error('[PATCH /api/admin/referrals/settings] Error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to update referral settings'
     return NextResponse.json(
-      { error: 'Failed to update referral settings' },
+      { error: errorMessage },
       { status: 500 }
     )
   }

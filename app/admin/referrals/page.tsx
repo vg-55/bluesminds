@@ -121,13 +121,20 @@ export default function AdminReferralsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings),
       });
+
       if (res.ok) {
         const data = await res.json();
         setSettings(data);
         setSettingsModalOpen(false);
+        alert('Referral settings saved successfully!');
+      } else {
+        const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('API error:', errorData);
+        alert(`Failed to save settings: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Failed to save settings:', error);
+      alert(`Failed to save settings: ${error instanceof Error ? error.message : 'Network error'}`);
     } finally {
       setSettingsLoading(false);
     }
