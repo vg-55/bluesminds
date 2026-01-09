@@ -206,6 +206,10 @@ export interface ModelsListResponse {
 // ----------------------------------------------------------------------------
 // Usage & Analytics Types
 // ----------------------------------------------------------------------------
+
+// Token source tracking - indicates where token counts came from
+export type TokenSource = 'actual' | 'estimated' | 'unknown'
+
 export interface UsageStats {
   total_requests: number
   total_tokens: number

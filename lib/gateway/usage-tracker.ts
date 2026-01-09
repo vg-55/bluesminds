@@ -6,7 +6,7 @@ import { supabaseAdmin } from '@/lib/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { calculateCostByRequest, calculateCostHybrid } from '@/lib/config/app'
 import { generateRequestId } from '@/lib/utils/crypto'
-import type { UsageLogInsert } from '@/lib/types'
+import type { UsageLogInsert, TokenSource } from '@/lib/types'
 
 export interface UsageData {
   userId: string
@@ -18,6 +18,7 @@ export interface UsageData {
   promptTokens: number
   completionTokens: number
   totalTokens: number
+  tokenSource?: TokenSource // 'actual', 'estimated', or 'unknown'
   responseTimeMs: number
   statusCode: number
   isError: boolean
@@ -47,11 +48,12 @@ export async function logUsage(data: UsageData): Promise<string> {
       endpoint: data.endpoint,
       model: data.model,
       provider: data.provider || null,
-      // KEEP: Token fields for analytics (not used for billing)
+      // Token fields with source tracking
       prompt_tokens: data.promptTokens,
       completion_tokens: data.completionTokens,
       total_tokens: data.totalTokens,
-      // NEW: Cost is per-request, not token-based
+      token_source: data.tokenSource || 'unknown',
+      // Hybrid cost calculation (token-based when available, per-request fallback)
       cost_usd: cost,
       response_time_ms: data.responseTimeMs,
       status_code: data.statusCode,
@@ -95,11 +97,12 @@ export async function logUsageBatch(records: UsageData[]): Promise<void> {
         endpoint: data.endpoint,
         model: data.model,
         provider: data.provider || null,
-        // KEEP: Token fields for analytics
+        // Token fields with source tracking
         prompt_tokens: data.promptTokens,
         completion_tokens: data.completionTokens,
         total_tokens: data.totalTokens,
-        // NEW: Cost is per-request
+        token_source: data.tokenSource || 'unknown',
+        // Hybrid cost calculation
         cost_usd: cost,
         response_time_ms: data.responseTimeMs,
         status_code: data.statusCode,

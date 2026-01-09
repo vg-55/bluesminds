@@ -325,15 +325,46 @@ export function extractUsageFromResponse(body: unknown): {
   promptTokens: number
   completionTokens: number
   totalTokens: number
+  source: 'actual' | 'unknown'
 } | null {
   if (typeof body === 'object' && body !== null && 'usage' in body) {
     const usage = (body as { usage: unknown }).usage
     if (typeof usage === 'object' && usage !== null) {
       const u = usage as Record<string, number>
+
+      const promptTokens = u.prompt_tokens || 0
+      const completionTokens = u.completion_tokens || 0
+      let totalTokens = u.total_tokens || 0
+
+      // Validate that total matches sum (allow ±1 for rounding)
+      const expectedTotal = promptTokens + completionTokens
+      if (totalTokens > 0 && Math.abs(totalTokens - expectedTotal) > 1) {
+        logger.warn('Token count mismatch in response', {
+          provided: totalTokens,
+          expected: expectedTotal,
+          promptTokens,
+          completionTokens,
+        })
+        // Fix it by using the sum
+        totalTokens = expectedTotal
+      }
+
+      // If all tokens are 0, the provider didn't supply usage data
+      if (totalTokens === 0 && promptTokens === 0 && completionTokens === 0) {
+        return {
+          promptTokens,
+          completionTokens,
+          totalTokens,
+          source: 'unknown',
+        }
+      }
+
+      // We have real token data from the provider
       return {
-        promptTokens: u.prompt_tokens || 0,
-        completionTokens: u.completion_tokens || 0,
-        totalTokens: u.total_tokens || 0,
+        promptTokens,
+        completionTokens,
+        totalTokens,
+        source: 'actual',
       }
     }
   }

@@ -11,6 +11,8 @@ import { logUsage } from '@/lib/gateway/usage-tracker'
 import { chatCompletionRequestSchema } from '@/lib/validations'
 import { errorResponse, ValidationError } from '@/lib/utils/errors'
 import { logger } from '@/lib/utils/logger'
+import { parseStreamForUsage } from '@/lib/utils/stream-parser'
+import { estimateTokensImproved } from '@/lib/utils/token-estimator'
 
 export const runtime = 'nodejs' // Use Node.js runtime for better streaming support
 export const maxDuration = 60 // 60 seconds timeout
@@ -91,22 +93,27 @@ export async function POST(request: NextRequest) {
 
     // 8. HANDLE STREAMING RESPONSES
     if (isStreaming && proxyResponse.stream) {
-      // For streaming, we estimate tokens for analytics/logging only (not rate limiting)
-      const estimatedTokens = estimateChatTokens(requestData.messages)
+      // Parse stream to extract actual token counts
+      const { stream: passthrough, usagePromise } = parseStreamForUsage(proxyResponse.stream)
 
-      // Log usage async (cost calculated per-request, not per-token)
-      logUsageAsync(
+      // Use improved estimation as initial fallback
+      const tokenEstimate = estimateTokensImproved(requestData.messages, actualModel)
+
+      // Log usage async - will update with actual tokens when stream completes
+      logUsageAsyncWithStreamParsing(
         authContext,
         serverId,
         requestedModel, // Log the model name the user requested
-        estimatedTokens,
+        actualModel, // For provider extraction
+        tokenEstimate,
+        usagePromise,
         responseTimeMs,
         proxyResponse.status,
         isError
       )
 
       // Return streaming response
-      return new Response(proxyResponse.stream, {
+      return new Response(passthrough, {
         status: proxyResponse.status,
         headers: {
           'Content-Type': 'text/event-stream',
@@ -119,7 +126,7 @@ export async function POST(request: NextRequest) {
     // 9. HANDLE NON-STREAMING RESPONSES
     const usage = extractUsageFromResponse(proxyResponse.body)
 
-    if (usage) {
+    if (usage && usage.totalTokens > 0) {
       // Update rate limit counters with actual token usage
       await incrementRateLimitCounters(authContext.apiKey.id, usage.totalTokens)
     }
@@ -135,6 +142,7 @@ export async function POST(request: NextRequest) {
       promptTokens: usage?.promptTokens || 0,
       completionTokens: usage?.completionTokens || 0,
       totalTokens: usage?.totalTokens || 0,
+      tokenSource: usage?.source || 'unknown',
       responseTimeMs,
       statusCode: proxyResponse.status,
       isError,
@@ -167,34 +175,57 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Async logging for streaming responses
-async function logUsageAsync(
+// Async logging for streaming responses with stream parsing
+async function logUsageAsyncWithStreamParsing(
   authContext: Awaited<ReturnType<typeof withAuth>>,
   serverId: string,
   requestedModel: string,
-  estimatedTokens: number,
+  actualModel: string,
+  tokenEstimate: { promptTokens: number; completionTokens: number; totalTokens: number; source: string },
+  usagePromise: Promise<{ promptTokens: number; completionTokens: number; totalTokens: number; source: 'actual' } | null>,
   responseTimeMs: number,
   statusCode: number,
   isError: boolean
 ) {
   try {
+    // Wait for stream parsing to complete (with timeout)
+    const timeoutMs = 30000 // 30 seconds max wait
+    const actualUsage = await Promise.race([
+      usagePromise,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
+    ])
+
+    // Use actual tokens if found, otherwise use improved estimate
+    const promptTokens = actualUsage?.promptTokens || tokenEstimate.promptTokens
+    const completionTokens = actualUsage?.completionTokens || tokenEstimate.completionTokens
+    const totalTokens = actualUsage?.totalTokens || tokenEstimate.totalTokens
+    const tokenSource = actualUsage ? 'actual' : 'estimated'
+
+    logger.gateway('Logging streaming usage', {
+      tokenSource,
+      promptTokens,
+      completionTokens,
+      totalTokens,
+    })
+
     await logUsage({
       userId: authContext.user.id,
       apiKeyId: authContext.apiKey.id,
       serverId,
       endpoint: '/v1/chat/completions',
       model: requestedModel,
-      provider: extractProviderFromModel(requestedModel),
-      promptTokens: Math.floor(estimatedTokens * 0.7), // Rough estimate
-      completionTokens: Math.floor(estimatedTokens * 0.3),
-      totalTokens: estimatedTokens,
+      provider: extractProviderFromModel(actualModel),
+      promptTokens,
+      completionTokens,
+      totalTokens,
+      tokenSource,
       responseTimeMs,
       statusCode,
       isError,
     })
 
     // Update rate limit counters
-    await incrementRateLimitCounters(authContext.apiKey.id, estimatedTokens)
+    await incrementRateLimitCounters(authContext.apiKey.id, totalTokens)
 
     // Decrement server counter
     await decrementServerRequests(serverId)

@@ -30,7 +30,7 @@ export function StatsCards({ userId, stats }: StatsCardsProps) {
       bg: 'bg-primary/10',
     },
     {
-      title: 'Tokens Used (Analytics)',
+      title: 'Tokens Used',
       value: stats?.total_tokens?.toLocaleString() || '0',
       icon: Activity,
       change: '+15%',
