@@ -43,48 +43,78 @@ export async function createSettingsVersion(
   try {
     // Use supabaseAdmin to bypass RLS restrictions
     if (!supabaseAdmin) {
-      console.error('Service role client not available')
+      console.error('[createSettingsVersion] Service role client not available')
       return null
     }
 
-    // Get next version number
+    console.log('[createSettingsVersion] Getting next version number...')
+
+    // Get next version number - try RPC first, then fallback to direct query
+    let nextVersion: number = 1
     const { data: versionData, error: versionError } = await supabaseAdmin.rpc(
       'get_next_settings_version'
     )
 
     if (versionError) {
-      console.error('Failed to get next version:', versionError)
-      return null
+      console.warn('[createSettingsVersion] RPC failed, using fallback:', versionError.message)
+
+      // Fallback: Get next version directly from table
+      const { data: maxVersionData, error: maxError } = await supabaseAdmin
+        .from('referral_settings_history')
+        .select('version')
+        .order('version', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (maxError && maxError.code !== 'PGRST116') { // PGRST116 = no rows
+        console.error('[createSettingsVersion] Failed to get max version:', maxError)
+        return null
+      }
+
+      nextVersion = maxVersionData ? maxVersionData.version + 1 : 1
+      console.log('[createSettingsVersion] Using fallback version:', nextVersion)
+    } else {
+      nextVersion = versionData as number
+      console.log('[createSettingsVersion] Got version from RPC:', nextVersion)
     }
 
-    const nextVersion = versionData as number
+    console.log('[createSettingsVersion] Inserting version:', nextVersion, 'enabled:', newSettings.enabled)
 
     // Insert new version
+    const insertData = {
+      version: nextVersion,
+      reward_type: newSettings.rewardType || 'requests',
+      referrer_reward_type: newSettings.referrerRewardType,
+      referrer_reward_value: newSettings.referrerRewardValue,
+      referee_reward_type: newSettings.refereeRewardType,
+      referee_reward_value: newSettings.refereeRewardValue,
+      referrer_requests: newSettings.referrerRequests || 1000,
+      referee_requests: newSettings.refereeRequests || 500,
+      min_purchase_amount: newSettings.minPurchaseAmount,
+      min_qualifying_requests: newSettings.minQualifyingRequests || 10,
+      enabled: newSettings.enabled,
+      changed_by: changedBy,
+      change_reason: reason || null,
+      metadata: {},
+    }
+
+    console.log('[createSettingsVersion] Insert data:', JSON.stringify(insertData, null, 2))
+
     const { data, error } = await supabaseAdmin
       .from('referral_settings_history')
-      .insert({
-        version: nextVersion,
-        reward_type: newSettings.rewardType || 'requests',
-        referrer_reward_type: newSettings.referrerRewardType,
-        referrer_reward_value: newSettings.referrerRewardValue,
-        referee_reward_type: newSettings.refereeRewardType,
-        referee_reward_value: newSettings.refereeRewardValue,
-        referrer_requests: newSettings.referrerRequests || 1000,
-        referee_requests: newSettings.refereeRequests || 500,
-        min_purchase_amount: newSettings.minPurchaseAmount,
-        min_qualifying_requests: newSettings.minQualifyingRequests || 10,
-        enabled: newSettings.enabled,
-        changed_by: changedBy,
-        change_reason: reason || null,
-        metadata: {},
-      })
+      .insert(insertData)
       .select()
       .single()
 
     if (error) {
-      console.error('Failed to create settings version:', error)
+      console.error('[createSettingsVersion] Insert failed:', error)
+      console.error('[createSettingsVersion] Error code:', error.code)
+      console.error('[createSettingsVersion] Error message:', error.message)
+      console.error('[createSettingsVersion] Error details:', error.details)
       return null
     }
+
+    console.log('[createSettingsVersion] Successfully created version:', nextVersion)
 
     return {
       version: nextVersion,
