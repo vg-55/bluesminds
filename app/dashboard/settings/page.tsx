@@ -26,7 +26,6 @@ interface UserProfile {
   status: string
   role?: string
   credits_balance?: number
-  referral_code?: string
   created_at?: string
 }
 
@@ -35,7 +34,6 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [referralsEnabled, setReferralsEnabled] = useState(false)
 
   // Form state
   const [fullName, setFullName] = useState('')
@@ -43,11 +41,6 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadProfile()
-    // Check if referral program is enabled
-    fetch('/api/referrals/enabled')
-      .then(res => res.json())
-      .then(data => setReferralsEnabled(data.enabled))
-      .catch(() => setReferralsEnabled(false))
   }, [])
 
   const loadProfile = async () => {
@@ -242,7 +235,7 @@ export default function SettingsPage() {
               Additional Information
             </h2>
             <p className="text-sm text-foreground/60">
-              View your account details and referral code
+              View your account details
             </p>
           </div>
         </div>
@@ -253,15 +246,6 @@ export default function SettingsPage() {
               <span className="text-sm text-foreground/60">Credits Balance</span>
               <span className="px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/30">
                 ${profile.credits_balance.toFixed(2)}
-              </span>
-            </div>
-          )}
-
-          {referralsEnabled && profile?.referral_code && (
-            <div className="flex items-center justify-between p-3 rounded-lg bg-foreground/[0.02] border border-foreground/10">
-              <span className="text-sm text-foreground/60">Referral Code</span>
-              <span className="px-3 py-1 rounded text-xs font-mono bg-foreground/5 text-foreground border border-foreground/10">
-                {profile.referral_code}
               </span>
             </div>
           )}

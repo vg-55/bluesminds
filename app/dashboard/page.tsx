@@ -7,7 +7,6 @@ import { StatsCards } from '@/components/dashboard/stats-cards'
 import { UsageChart } from '@/components/dashboard/usage-chart'
 import { RecentRequests } from '@/components/dashboard/recent-requests'
 import { QuickActions } from '@/components/dashboard/quick-actions'
-import { ReferralSection } from '@/components/dashboard/referral-section'
 
 // Revalidate every 30 seconds to show fresh data
 export const revalidate = 30
@@ -42,15 +41,6 @@ export default async function DashboardPage() {
     }
   }
 
-  // Check if referral program is enabled
-  const { data: referralSettings } = await supabase
-    .from('referral_settings')
-    .select('enabled')
-    .limit(1)
-    .single()
-
-  const referralsEnabled = referralSettings?.enabled ?? false
-
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -74,13 +64,6 @@ export default async function DashboardPage() {
         <UsageChart userId={user.id} />
         <RecentRequests userId={user.id} />
       </div>
-
-      {/* Referral Section - Only show if enabled */}
-      {referralsEnabled && (
-        <div className="pt-4">
-          <ReferralSection userId={user.id} />
-        </div>
-      )}
     </div>
   )
 }

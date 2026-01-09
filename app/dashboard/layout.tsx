@@ -43,22 +43,12 @@ export default async function DashboardLayout({
   // Check if user is admin using centralized function
   const isAdmin = await isUserAdmin(user.id)
 
-  // Check if referral program is enabled
-  const { data: referralSettings } = await supabase
-    .from('referral_settings')
-    .select('enabled')
-    .limit(1)
-    .single()
-
-  const referralsEnabled = referralSettings?.enabled ?? false
-
   return (
     <div className="min-h-screen bg-background">
       <DashboardNav
         userTier={profile.tier}
         userEmail={user.email || ''}
         isAdmin={isAdmin}
-        referralsEnabled={referralsEnabled}
       />
 
       <div className="ml-64 flex flex-col min-h-screen">

@@ -18,7 +18,6 @@ import {
   Key,
   Boxes,
   Brain,
-  Gift,
   Ticket,
   DollarSign,
 } from "lucide-react";
@@ -31,7 +30,6 @@ const navigation = [
   { name: "Models", href: "/admin/models", icon: Brain },
   { name: "Model Pricing", href: "/admin/model-pricing", icon: DollarSign },
   { name: "Redemption Codes", href: "/admin/codes", icon: Ticket },
-  { name: "Referrals", href: "/admin/referrals", icon: Gift },
   { name: "System Analytics", href: "/admin/analytics", icon: BarChart3 },
   { name: "API Keys", href: "/admin/keys", icon: Key },
   { name: "Audit Logs", href: "/admin/logs", icon: FileText },

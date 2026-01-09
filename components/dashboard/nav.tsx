@@ -15,7 +15,6 @@ import {
   BookOpen,
   Server,
   Users,
-  Gift,
 } from 'lucide-react'
 
 interface NavItem {
@@ -35,11 +34,6 @@ const navItems: NavItem[] = [
     name: 'API Keys',
     href: '/dashboard/keys',
     icon: Key,
-  },
-  {
-    name: 'Referrals',
-    href: '/dashboard/referrals',
-    icon: Gift,
   },
   {
     name: 'Billing',
@@ -74,12 +68,10 @@ export function DashboardNav({
   userTier,
   userEmail,
   isAdmin = false,
-  referralsEnabled = true,
 }: {
   userTier: string
   userEmail: string
   isAdmin?: boolean
-  referralsEnabled?: boolean
 }) {
   const pathname = usePathname()
 
@@ -89,9 +81,6 @@ export function DashboardNav({
         {navItems.map((item) => {
           // Hide admin items for non-admins
           if (item.adminOnly && !isAdmin) return null
-
-          // Hide referrals if not enabled
-          if (item.href === '/dashboard/referrals' && !referralsEnabled) return null
 
           const isActive = pathname === item.href
           const Icon = item.icon
