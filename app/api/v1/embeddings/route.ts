@@ -74,13 +74,14 @@ export async function POST(request: NextRequest) {
     }
 
     // 9. LOG USAGE
+    const actualModel = serverSelection.actualModel || model
     await logUsage({
       userId: authContext.user.id,
       apiKeyId: authContext.apiKey.id,
       serverId,
       endpoint: '/v1/embeddings',
       model,
-      provider: extractProviderFromModel(model),
+      provider: extractProviderFromModel(actualModel) || serverSelection.server.name.toLowerCase(),
       promptTokens: usage?.promptTokens || estimatedTokens,
       completionTokens: 0,
       totalTokens: usage?.totalTokens || estimatedTokens,

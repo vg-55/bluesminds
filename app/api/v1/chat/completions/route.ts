@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
       logUsageAsyncWithStreamParsing(
         authContext,
         serverId,
+        serverSelection.server.name, // Pass server name for provider tracking
         requestedModel, // Log the model name the user requested
         actualModel, // For provider extraction
         tokenEstimate,
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
       serverId,
       endpoint: '/v1/chat/completions',
       model: requestedModel, // Log the model name the user requested
-      provider: extractProviderFromModel(actualModel), // But extract provider from actual model
+      provider: extractProviderFromModel(actualModel) || serverSelection.server.name.toLowerCase(), // Extract from model or use server name as fallback
       promptTokens: usage?.promptTokens || 0,
       completionTokens: usage?.completionTokens || 0,
       totalTokens: usage?.totalTokens || 0,
@@ -179,6 +180,7 @@ export async function POST(request: NextRequest) {
 async function logUsageAsyncWithStreamParsing(
   authContext: Awaited<ReturnType<typeof withAuth>>,
   serverId: string,
+  serverName: string,
   requestedModel: string,
   actualModel: string,
   tokenEstimate: { promptTokens: number; completionTokens: number; totalTokens: number; source: string },
@@ -214,7 +216,7 @@ async function logUsageAsyncWithStreamParsing(
       serverId,
       endpoint: '/v1/chat/completions',
       model: requestedModel,
-      provider: extractProviderFromModel(actualModel),
+      provider: extractProviderFromModel(actualModel) || serverName.toLowerCase(),
       promptTokens,
       completionTokens,
       totalTokens,

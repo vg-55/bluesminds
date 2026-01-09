@@ -279,12 +279,26 @@ export function extractModelFromRequest(body: unknown): string | undefined {
 
 // Extract provider from model name (e.g., "gpt-4" -> "openai")
 export function extractProviderFromModel(model: string): string | undefined {
+  // Handle provider prefixes in model names (e.g., "anthropic/claude-opus-4-5", "azure_ai/claude-sonnet-4-5")
+  if (model.includes('/')) {
+    const [providerPrefix] = model.split('/')
+    // Normalize common provider prefixes
+    const normalizedProvider = providerPrefix.toLowerCase()
+      .replace('_', '-')
+      .replace('azure-ai', 'azure')
+      .replace('azure-openai', 'azure')
+    return normalizedProvider
+  }
+
+  // Fallback to model name pattern matching
   const providers: Record<string, string[]> = {
-    openai: ['gpt-', 'text-', 'davinci', 'curie', 'babbage', 'ada'],
+    openai: ['gpt-', 'text-', 'davinci', 'curie', 'babbage', 'ada', 'o1-', 'o3-'],
     anthropic: ['claude-'],
-    google: ['gemini-', 'palm-'],
+    google: ['gemini-', 'palm-', 'bard-'],
     cohere: ['command-', 'embed-'],
     meta: ['llama-'],
+    deepseek: ['deepseek-'],
+    mistral: ['mistral-', 'mixtral-'],
   }
 
   for (const [provider, prefixes] of Object.entries(providers)) {
