@@ -1,5 +1,22 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "fumadocs-ui/style.css";
+
+/* Debug: Force navbar visibility */
+[data-nav], nav, header {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Ensure Fumadocs navbar is visible */
+.fd-nav, [data-fd-nav] {
+  display: flex !important;
+  visibility: visible !important;
+  background: rgba(0, 0, 0, 0.8) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  z-index: 50 !important;
+}
 
 @custom-variant dark (&:is(.dark *));
 

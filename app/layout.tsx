@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { Suspense } from "react"
 import { Providers } from "./providers"
+import { RootProvider } from 'fumadocs-ui/provider/next'
 
 import { Open_Sans, Rubik, Instrument_Serif, Geist as V0_Font_Geist, Geist_Mono as V0_Font_Geist_Mono, Source_Serif_4 as V0_Font_Source_Serif_4 } from 'next/font/google'
 
@@ -60,10 +61,12 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`font-sans ${openSans.variable} ${rubik.variable} ${instrumentSerif.variable} ${geistMono.variable}`}>
         <Providers>
-          <Suspense fallback={null}>
-            {children}
-            <Analytics />
-          </Suspense>
+          <RootProvider>
+            <Suspense fallback={null}>
+              {children}
+              <Analytics />
+            </Suspense>
+          </RootProvider>
         </Providers>
       </body>
     </html>
