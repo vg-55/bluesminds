@@ -58,13 +58,12 @@ read -p "Application URL (default: http://localhost:3000): " APP_URL
 APP_URL=${APP_URL:-http://localhost:3000}
 
 echo ""
-echo "🔵 Stripe Configuration (press Enter to skip for now)"
-read -p "Stripe Secret Key: " STRIPE_SECRET_KEY
-read -p "Stripe Publishable Key: " STRIPE_PUBLISHABLE_KEY
-read -p "Stripe Webhook Secret: " STRIPE_WEBHOOK_SECRET
-read -p "Stripe Price ID - Starter: " STRIPE_PRICE_STARTER
-read -p "Stripe Price ID - Pro: " STRIPE_PRICE_PRO
-read -p "Stripe Price ID - Enterprise: " STRIPE_PRICE_ENTERPRISE
+echo "🟣 Creem Configuration (press Enter to skip for now)"
+read -p "Creem API Key: " CREEM_API_KEY
+read -p "Creem Webhook Secret: " CREEM_WEBHOOK_SECRET
+read -p "Creem Product ID - Starter: " CREEM_PRODUCT_STARTER
+read -p "Creem Product ID - Pro: " CREEM_PRODUCT_PRO
+read -p "Creem Product ID - Enterprise: " CREEM_PRODUCT_ENTERPRISE
 
 echo ""
 read -p "Admin Emails (comma-separated): " ADMIN_EMAILS
@@ -77,23 +76,20 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     sed -i '' "s|SUPABASE_SERVICE_ROLE_KEY=.*|SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY|" .env.local
     sed -i '' "s|NEXT_PUBLIC_APP_URL=.*|NEXT_PUBLIC_APP_URL=$APP_URL|" .env.local
 
-    if [ ! -z "$STRIPE_SECRET_KEY" ]; then
-        sed -i '' "s|STRIPE_SECRET_KEY=.*|STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY|" .env.local
+    if [ ! -z "$CREEM_API_KEY" ]; then
+        sed -i '' "s|CREEM_API_KEY=.*|CREEM_API_KEY=$CREEM_API_KEY|" .env.local
     fi
-    if [ ! -z "$STRIPE_PUBLISHABLE_KEY" ]; then
-        sed -i '' "s|NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=.*|NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY|" .env.local
+    if [ ! -z "$CREEM_WEBHOOK_SECRET" ]; then
+        sed -i '' "s|CREEM_WEBHOOK_SECRET=.*|CREEM_WEBHOOK_SECRET=$CREEM_WEBHOOK_SECRET|" .env.local
     fi
-    if [ ! -z "$STRIPE_WEBHOOK_SECRET" ]; then
-        sed -i '' "s|STRIPE_WEBHOOK_SECRET=.*|STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET|" .env.local
+    if [ ! -z "$CREEM_PRODUCT_STARTER" ]; then
+        sed -i '' "s|CREEM_PRODUCT_STARTER=.*|CREEM_PRODUCT_STARTER=$CREEM_PRODUCT_STARTER|" .env.local
     fi
-    if [ ! -z "$STRIPE_PRICE_STARTER" ]; then
-        sed -i '' "s|STRIPE_PRICE_STARTER=.*|STRIPE_PRICE_STARTER=$STRIPE_PRICE_STARTER|" .env.local
+    if [ ! -z "$CREEM_PRODUCT_PRO" ]; then
+        sed -i '' "s|CREEM_PRODUCT_PRO=.*|CREEM_PRODUCT_PRO=$CREEM_PRODUCT_PRO|" .env.local
     fi
-    if [ ! -z "$STRIPE_PRICE_PRO" ]; then
-        sed -i '' "s|STRIPE_PRICE_PRO=.*|STRIPE_PRICE_PRO=$STRIPE_PRICE_PRO|" .env.local
-    fi
-    if [ ! -z "$STRIPE_PRICE_ENTERPRISE" ]; then
-        sed -i '' "s|STRIPE_PRICE_ENTERPRISE=.*|STRIPE_PRICE_ENTERPRISE=$STRIPE_PRICE_ENTERPRISE|" .env.local
+    if [ ! -z "$CREEM_PRODUCT_ENTERPRISE" ]; then
+        sed -i '' "s|CREEM_PRODUCT_ENTERPRISE=.*|CREEM_PRODUCT_ENTERPRISE=$CREEM_PRODUCT_ENTERPRISE|" .env.local
     fi
     if [ ! -z "$ADMIN_EMAILS" ]; then
         sed -i '' "s|ADMIN_EMAILS=.*|ADMIN_EMAILS=$ADMIN_EMAILS|" .env.local
@@ -105,23 +101,20 @@ else
     sed -i "s|SUPABASE_SERVICE_ROLE_KEY=.*|SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY|" .env.local
     sed -i "s|NEXT_PUBLIC_APP_URL=.*|NEXT_PUBLIC_APP_URL=$APP_URL|" .env.local
 
-    if [ ! -z "$STRIPE_SECRET_KEY" ]; then
-        sed -i "s|STRIPE_SECRET_KEY=.*|STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY|" .env.local
+    if [ ! -z "$CREEM_API_KEY" ]; then
+        sed -i "s|CREEM_API_KEY=.*|CREEM_API_KEY=$CREEM_API_KEY|" .env.local
     fi
-    if [ ! -z "$STRIPE_PUBLISHABLE_KEY" ]; then
-        sed -i "s|NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=.*|NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY|" .env.local
+    if [ ! -z "$CREEM_WEBHOOK_SECRET" ]; then
+        sed -i "s|CREEM_WEBHOOK_SECRET=.*|CREEM_WEBHOOK_SECRET=$CREEM_WEBHOOK_SECRET|" .env.local
     fi
-    if [ ! -z "$STRIPE_WEBHOOK_SECRET" ]; then
-        sed -i "s|STRIPE_WEBHOOK_SECRET=.*|STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET|" .env.local
+    if [ ! -z "$CREEM_PRODUCT_STARTER" ]; then
+        sed -i "s|CREEM_PRODUCT_STARTER=.*|CREEM_PRODUCT_STARTER=$CREEM_PRODUCT_STARTER|" .env.local
     fi
-    if [ ! -z "$STRIPE_PRICE_STARTER" ]; then
-        sed -i "s|STRIPE_PRICE_STARTER=.*|STRIPE_PRICE_STARTER=$STRIPE_PRICE_STARTER|" .env.local
+    if [ ! -z "$CREEM_PRODUCT_PRO" ]; then
+        sed -i "s|CREEM_PRODUCT_PRO=.*|CREEM_PRODUCT_PRO=$CREEM_PRODUCT_PRO|" .env.local
     fi
-    if [ ! -z "$STRIPE_PRICE_PRO" ]; then
-        sed -i "s|STRIPE_PRICE_PRO=.*|STRIPE_PRICE_PRO=$STRIPE_PRICE_PRO|" .env.local
-    fi
-    if [ ! -z "$STRIPE_PRICE_ENTERPRISE" ]; then
-        sed -i "s|STRIPE_PRICE_ENTERPRISE=.*|STRIPE_PRICE_ENTERPRISE=$STRIPE_PRICE_ENTERPRISE|" .env.local
+    if [ ! -z "$CREEM_PRODUCT_ENTERPRISE" ]; then
+        sed -i "s|CREEM_PRODUCT_ENTERPRISE=.*|CREEM_PRODUCT_ENTERPRISE=$CREEM_PRODUCT_ENTERPRISE|" .env.local
     fi
     if [ ! -z "$ADMIN_EMAILS" ]; then
         sed -i "s|ADMIN_EMAILS=.*|ADMIN_EMAILS=$ADMIN_EMAILS|" .env.local

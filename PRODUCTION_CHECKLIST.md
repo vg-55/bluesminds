@@ -9,7 +9,7 @@ Use this checklist before deploying to production. Check off each item as you co
 - [ ] All secrets use strong random values (32+ characters)
 - [ ] `JWT_SECRET` is unique and secure
 - [ ] `API_KEY_SECRET` is unique and secure
-- [ ] `STRIPE_WEBHOOK_SECRET` is configured (if using Stripe)
+- [ ] `CREEM_WEBHOOK_SECRET` is configured (if using Creem)
 - [ ] No secrets are committed to version control
 - [ ] `.env.local` is in `.gitignore`
 - [ ] `NODE_ENV=production` is set in production
@@ -67,11 +67,11 @@ Use this checklist before deploying to production. Check off each item as you co
   - [ ] `API_KEY_SECRET`
   - [ ] `ADMIN_EMAILS`
 - [ ] Optional environment variables (if using):
-  - [ ] `STRIPE_SECRET_KEY`
-  - [ ] `STRIPE_WEBHOOK_SECRET`
-  - [ ] `STRIPE_PRICE_STARTER`
-  - [ ] `STRIPE_PRICE_PRO`
-  - [ ] `STRIPE_PRICE_ENTERPRISE`
+  - [ ] `CREEM_API_KEY`
+  - [ ] `CREEM_WEBHOOK_SECRET`
+  - [ ] `CREEM_PRODUCT_STARTER`
+  - [ ] `CREEM_PRODUCT_PRO`
+  - [ ] `CREEM_PRODUCT_ENTERPRISE`
   - [ ] `SENTRY_DSN`
   - [ ] `LOGTAIL_SOURCE_TOKEN`
 - [ ] `NEXT_PUBLIC_APP_URL` points to production domain
@@ -90,9 +90,9 @@ Use this checklist before deploying to production. Check off each item as you co
 - [ ] No console errors in browser
 - [ ] No console warnings in browser
 
-### Stripe Configuration (if using billing)
+### Creem Configuration (if using billing)
 
-- [ ] Stripe account is in production mode
+- [ ] Creem account is in production mode
 - [ ] Products are created:
   - [ ] Starter ($29/month)
   - [ ] Pro ($99/month)
@@ -200,8 +200,8 @@ Choose your deployment platform:
 - [ ] Check logs for any errors
 - [ ] Test authentication flow completely
 - [ ] Test API key creation, rotation, deletion
-- [ ] Test payment flow (if using Stripe)
-- [ ] Test billing portal (if using Stripe)
+- [ ] Test payment flow (if using Creem)
+- [ ] Test billing portal (if using Creem)
 
 ### Performance
 

@@ -13,6 +13,16 @@ The following secrets need to be created in your Vercel project:
 5. `api-key-secret` - A secure random string (minimum 32 characters)
 6. `app-url` - Your application URL (e.g., https://yourdomain.com)
 
+## Optional Secrets (Billing via Creem)
+
+If you enable billing, add:
+
+1. `creem-api-key` - Creem API key (server-side)
+2. `creem-webhook-secret` - Webhook signing secret from Creem dashboard
+3. `creem-product-starter` - Creem product ID for Starter tier
+4. `creem-product-pro` - Creem product ID for Pro tier
+5. `creem-product-enterprise` - Creem product ID for Enterprise tier
+
 ## Option 1: Using Vercel CLI (Recommended)
 
 ### Prerequisites
@@ -41,6 +51,13 @@ vercel secrets add api-key-secret "$(openssl rand -base64 32)"
 
 # Application URL
 vercel secrets add app-url "https://your-domain.vercel.app"
+
+# (Optional) Billing via Creem
+vercel secrets add creem-api-key "your-creem-api-key"
+vercel secrets add creem-webhook-secret "your-creem-webhook-secret"
+vercel secrets add creem-product-starter "your-creem-product-id"
+vercel secrets add creem-product-pro "your-creem-product-id"
+vercel secrets add creem-product-enterprise "your-creem-product-id"
 ```
 
 ### Generate Secure Random Strings
@@ -68,6 +85,11 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
    - `jwt-secret`
    - `api-key-secret`
    - `app-url`
+   - `creem-api-key` (optional, billing)
+   - `creem-webhook-secret` (optional, billing)
+   - `creem-product-starter` (optional, billing)
+   - `creem-product-pro` (optional, billing)
+   - `creem-product-enterprise` (optional, billing)
 6. Enter the corresponding value
 7. Select the environments (Production, Preview, Development)
 8. Click **Save**

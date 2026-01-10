@@ -9,6 +9,9 @@ import { errorResponse, successResponse } from '@/lib/utils/errors'
 import { logger } from '@/lib/utils/logger'
 import { checkAdminAccess } from '@/lib/utils/check-admin'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 // GET /api/admin/health - Get health summary
 export async function GET(request: NextRequest) {
   try {

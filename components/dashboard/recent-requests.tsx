@@ -29,15 +29,29 @@ export function RecentRequests({ userId }: RecentRequestsProps) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/usage/logs?per_page=5')
-      .then((res) => res.json())
-      .then((result) => {
-        if (result.success) {
-          setLogs(result.data.logs)
-        }
+    const loadLogs = () => {
+      // Add timestamp to prevent caching
+      fetch(`/api/usage/logs?per_page=5&_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
       })
-      .catch(console.error)
-      .finally(() => setLoading(false))
+        .then((res) => res.json())
+        .then((result) => {
+          if (result.success) {
+            setLogs(result.data.logs)
+          }
+        })
+        .catch(console.error)
+        .finally(() => setLoading(false))
+    }
+
+    loadLogs()
+
+    // Refresh every 10 seconds
+    const interval = setInterval(loadLogs, 10000)
+    return () => clearInterval(interval)
   }, [userId])
 
   return (

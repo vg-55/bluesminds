@@ -8,8 +8,9 @@ import { UsageChart } from '@/components/dashboard/usage-chart'
 import { RecentRequests } from '@/components/dashboard/recent-requests'
 import { QuickActions } from '@/components/dashboard/quick-actions'
 
-// Revalidate every 30 seconds to show fresh data
-export const revalidate = 30
+// Force dynamic rendering - no caching to show real-time data
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function DashboardPage() {
   const supabase = await createServerClient()

@@ -9,7 +9,7 @@ A production-grade API gateway for managing multiple LLM providers with built-in
 - **Rate Limiting**: Per-key rate limits (RPM, TPM) and usage quotas
 - **Load Balancing**: Intelligent request distribution across multiple LiteLLM servers
 - **Usage Tracking**: Detailed analytics and cost tracking per API key
-- **Billing Integration**: Stripe-powered subscriptions with multiple tiers
+- **Billing Integration**: Creem-powered subscriptions with multiple tiers
 - **Health Monitoring**: Automatic health checks for backend servers
 - **OpenAI Compatible**: Drop-in replacement for OpenAI API
 - **Dashboard**: Full-featured web dashboard for management
@@ -64,7 +64,7 @@ Visit http://localhost:3000 to see your gateway!
 - **Framework**: Next.js 15 (App Router)
 - **Database**: Supabase (PostgreSQL)
 - **Auth**: Supabase Auth + Custom API Keys
-- **Billing**: Stripe
+- **Billing**: Creem
 - **LLM Proxy**: LiteLLM
 - **UI**: React 19, TailwindCSS, Radix UI
 - **Language**: TypeScript
@@ -256,7 +256,7 @@ console.log(response.choices[0].message.content);
 
 - `POST /api/billing/checkout` - Create checkout session
 - `POST /api/billing/portal` - Access billing portal
-- `POST /api/billing/webhook` - Stripe webhook handler
+- `POST /api/billing/webhook` - Creem webhook handler
 
 ## Development
 
@@ -283,7 +283,7 @@ bluesminds/
 │   │   ├── proxy.ts
 │   │   ├── usage-tracker.ts
 │   │   └── health-monitor.ts
-│   ├── billing/         # Stripe integration
+│   ├── billing/         # Creem integration
 │   ├── supabase/        # Database client
 │   └── types/           # TypeScript types
 ├── supabase/
@@ -316,9 +316,9 @@ Required:
 - `API_KEY_SECRET`
 
 Optional (for billing):
-- `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET`
-- `STRIPE_PRICE_*`
+- `CREEM_API_KEY`
+- `CREEM_WEBHOOK_SECRET`
+- `CREEM_PRODUCT_*`
 
 ## Security
 

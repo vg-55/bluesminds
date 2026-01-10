@@ -32,6 +32,23 @@ export async function logUsage(data: UsageData): Promise<string> {
   try {
     const requestId = generateRequestId()
 
+    // Validate token consistency
+    let totalTokens = data.totalTokens
+    if (totalTokens > 0) {
+      const expectedTotal = data.promptTokens + data.completionTokens
+      if (Math.abs(totalTokens - expectedTotal) > 1) {
+        logger.warn('Token count mismatch in usage logging', {
+          provided: totalTokens,
+          expected: expectedTotal,
+          promptTokens: data.promptTokens,
+          completionTokens: data.completionTokens,
+          model: data.model,
+        })
+        // Fix it by using the sum
+        totalTokens = expectedTotal
+      }
+    }
+
     // HYBRID: Use token-based pricing when tokens available, otherwise per-request
     // This provides more accurate cost calculation
     const cost = calculateCostHybrid(
@@ -51,7 +68,7 @@ export async function logUsage(data: UsageData): Promise<string> {
       // Token fields with source tracking
       prompt_tokens: data.promptTokens,
       completion_tokens: data.completionTokens,
-      total_tokens: data.totalTokens,
+      total_tokens: totalTokens,
       token_source: data.tokenSource || 'unknown',
       // Hybrid cost calculation (token-based when available, per-request fallback)
       cost_usd: cost,
@@ -82,6 +99,24 @@ export async function logUsageBatch(records: UsageData[]): Promise<void> {
   try {
     const usageLogs: UsageLogInsert[] = records.map((data) => {
       const requestId = generateRequestId()
+
+      // Validate token consistency
+      let totalTokens = data.totalTokens
+      if (totalTokens > 0) {
+        const expectedTotal = data.promptTokens + data.completionTokens
+        if (Math.abs(totalTokens - expectedTotal) > 1) {
+          logger.warn('Token count mismatch in batch usage logging', {
+            provided: totalTokens,
+            expected: expectedTotal,
+            promptTokens: data.promptTokens,
+            completionTokens: data.completionTokens,
+            model: data.model,
+          })
+          // Fix it by using the sum
+          totalTokens = expectedTotal
+        }
+      }
+
       // HYBRID: Use token-based pricing when tokens available, otherwise per-request
       const cost = calculateCostHybrid(
         data.model,
@@ -100,7 +135,7 @@ export async function logUsageBatch(records: UsageData[]): Promise<void> {
         // Token fields with source tracking
         prompt_tokens: data.promptTokens,
         completion_tokens: data.completionTokens,
-        total_tokens: data.totalTokens,
+        total_tokens: totalTokens,
         token_source: data.tokenSource || 'unknown',
         // Hybrid cost calculation
         cost_usd: cost,

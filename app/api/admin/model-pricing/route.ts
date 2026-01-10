@@ -9,6 +9,9 @@ import { logger } from '@/lib/utils/logger'
 import { checkAdminAccess } from '@/lib/utils/check-admin'
 import { ensureUserProfile } from '@/lib/utils/ensure-user-profile'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 // GET: Fetch all model pricing
 export async function GET(request: NextRequest) {
   try {

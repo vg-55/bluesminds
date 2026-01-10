@@ -10,7 +10,7 @@ export const clientEnv = {
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   appUrl: process.env.NEXT_PUBLIC_APP_URL!,
   nodeEnv: process.env.NODE_ENV || 'development',
-  stripePublishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+  creemEnabled: process.env.NEXT_PUBLIC_CREEM_ENABLED,
 }
 
 // Helper to check if we're in production

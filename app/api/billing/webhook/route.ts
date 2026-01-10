@@ -1,170 +1,211 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // ============================================================================
-// STRIPE WEBHOOK HANDLER
+// CREEM WEBHOOK HANDLER
 // ============================================================================
 
 import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/client'
-import { verifyWebhookSignature } from '@/lib/billing/stripe'
 import { logger } from '@/lib/utils/logger'
-import type Stripe from 'stripe'
+import { parseCreemWebhookEvent, verifyCreemWebhookSignature } from '@/lib/billing/creem-webhook'
+import { markWebhookEventProcessed } from '@/lib/billing/webhook-idempotency'
+
+type Tier = 'free' | 'starter' | 'pro' | 'enterprise'
+
+function mapCreemProductToTier(productId?: string): Tier {
+  const starter = process.env.CREEM_PRODUCT_STARTER
+  const pro = process.env.CREEM_PRODUCT_PRO
+  const enterprise = process.env.CREEM_PRODUCT_ENTERPRISE
+
+  if (productId && starter && productId === starter) return 'starter'
+  if (productId && pro && productId === pro) return 'pro'
+  if (productId && enterprise && productId === enterprise) return 'enterprise'
+  return 'free'
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.text()
-    const signature = request.headers.get('stripe-signature')
+    const rawBody = await request.text()
 
-    if (!signature) {
-      return new Response('No signature', { status: 400 })
+    const sig = verifyCreemWebhookSignature({ rawBody, headers: request.headers })
+    if (!sig.ok) {
+      logger.warn('Creem webhook signature verification failed', { reason: sig.reason })
+      return new Response('Invalid signature', { status: 400 })
     }
 
-    // Verify webhook signature
-    const event = verifyWebhookSignature(body, signature)
+    const event = parseCreemWebhookEvent(rawBody)
+    logger.info(`Creem webhook received: ${event.type}`, { eventId: event.id })
 
-    logger.info(`Stripe webhook received: ${event.type}`)
+    // Idempotency: if no event id, we still process (but log).
+    if (event.id) {
+      const { alreadyProcessed } = await markWebhookEventProcessed({
+        provider: 'creem',
+        eventId: event.id,
+        payload: event,
+      })
+      if (alreadyProcessed) {
+        return new Response('OK', { status: 200 })
+      }
+    } else {
+      logger.warn('Creem webhook missing event id; cannot enforce idempotency', { type: event.type })
+    }
 
-    // Handle different event types
+    if (!supabaseAdmin) throw new Error('Server misconfigured: supabaseAdmin unavailable')
+
+    // Handle event types (best-effort; keep safe failure modes)
     switch (event.type) {
-      case 'customer.subscription.created':
-      case 'customer.subscription.updated':
-        await handleSubscriptionUpdate(event.data.object as Stripe.Subscription)
+      // Subscription lifecycle
+      case 'subscription.created':
+      case 'subscription.updated':
+        await handleSubscriptionUpsert(event)
+        break
+      case 'subscription.canceled':
+      case 'subscription.deleted':
+        await handleSubscriptionCanceled(event)
         break
 
-      case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
-        break
-
-      case 'invoice.paid':
-        await handleInvoicePaid(event.data.object as Stripe.Invoice)
-        break
-
-      case 'invoice.payment_failed':
-        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice)
+      // Checkout completion can also carry subscription/customer info
+      case 'checkout.completed':
+        await handleCheckoutCompleted(event)
         break
 
       default:
-        logger.info(`Unhandled event type: ${event.type}`)
+        logger.info(`Unhandled Creem event type: ${event.type}`)
     }
 
     return new Response('OK', { status: 200 })
   } catch (error) {
-    logger.error('Webhook error', error)
+    logger.error('Creem webhook error', error as any)
+    // Return 400 so provider retries only if they treat non-2xx as retryable.
     return new Response('Webhook error', { status: 400 })
   }
 }
 
-// Handle subscription creation/update
-async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
-  const customerId = subscription.customer as string
-  const status = subscription.status
-  const priceId = subscription.items.data[0]?.price.id
+async function handleCheckoutCompleted(event: { id?: string; type: string; data?: any }) {
+  const data = event.data || {}
+  const customerId = data.customer?.id || data.customerId
+  const subscriptionId = data.subscription?.id || data.subscriptionId
+  const productId = data.product?.id || data.productId
+  const status = data.subscription?.status || data.status
 
-  // Map price ID to tier
-  const tierMap: Record<string, string> = {
-    [process.env.STRIPE_PRICE_STARTER || '']: 'starter',
-    [process.env.STRIPE_PRICE_PRO || '']: 'pro',
-    [process.env.STRIPE_PRICE_ENTERPRISE || '']: 'enterprise',
-  }
-
-  const tier = tierMap[priceId] || 'free'
-
-  // Find user by Stripe customer ID
-  const { data: user } = await supabaseAdmin
-    .from('users')
-    .select('id')
-    .eq('metadata->>stripe_customer_id', customerId)
-    .single()
-
-  if (!user) {
-    logger.error('User not found for Stripe customer', { customerId })
+  const userId = data.metadata?.userId || data.metadata?.user_id
+  if (!userId) {
+    logger.warn('checkout.completed missing metadata.userId; skipping', { eventId: event.id })
     return
   }
 
-  // Update user tier
-  await supabaseAdmin
+  const tier = mapCreemProductToTier(productId)
+
+  await (supabaseAdmin as any)
     .from('users')
     .update({
       tier,
       metadata: {
-        stripe_subscription_id: subscription.id,
-        stripe_subscription_status: status,
+        creem_customer_id: customerId,
+        creem_subscription_id: subscriptionId,
+        creem_subscription_status: status,
+        creem_product_id: productId,
       },
     })
-    .eq('id', user.id)
+    .eq('id', userId)
 
-  logger.billing('Subscription updated', {
-    userId: user.id,
+  logger.billing('Checkout completed', {
+    provider: 'creem',
+    userId,
     tier,
-    status,
+    subscriptionId,
+    customerId,
   })
 }
 
-// Handle subscription deletion
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  const customerId = subscription.customer as string
+async function handleSubscriptionUpsert(event: { id?: string; type: string; data?: any }) {
+  const data = event.data || {}
+  const subscriptionId = data.id || data.subscriptionId
+  const customerId = data.customer?.id || data.customerId
+  const productId = data.product?.id || data.productId
+  const status = data.status
 
-  // Find user
-  const { data: user } = await supabaseAdmin
+  const tier = mapCreemProductToTier(productId)
+
+  // Prefer mapping by customer id; fallback to metadata userId if present.
+  let userId: string | undefined
+
+  if (customerId) {
+    const { data: user } = await (supabaseAdmin as any)
+      .from('users')
+      .select('id,metadata')
+      .eq('metadata->>creem_customer_id', customerId)
+      .single()
+    userId = user?.id
+  }
+
+  if (!userId) {
+    userId = data.metadata?.userId || data.metadata?.user_id
+  }
+
+  if (!userId) {
+    logger.warn('Subscription event could not be mapped to a user', {
+      eventId: event.id,
+      customerId,
+      subscriptionId,
+    })
+    return
+  }
+
+  await (supabaseAdmin as any)
     .from('users')
-    .select('id')
-    .eq('metadata->>stripe_customer_id', customerId)
+    .update({
+      tier,
+      metadata: {
+        creem_customer_id: customerId,
+        creem_subscription_id: subscriptionId,
+        creem_subscription_status: status,
+        creem_product_id: productId,
+      },
+    })
+    .eq('id', userId)
+
+  logger.billing('Subscription updated', {
+    provider: 'creem',
+    userId,
+    tier,
+    status,
+    subscriptionId,
+  })
+}
+
+async function handleSubscriptionCanceled(event: { id?: string; type: string; data?: any }) {
+  const data = event.data || {}
+  const customerId = data.customer?.id || data.customerId
+  const subscriptionId = data.id || data.subscriptionId
+  const status = data.status || 'canceled'
+
+  if (!customerId) {
+    logger.warn('Subscription canceled event missing customerId', { eventId: event.id, subscriptionId })
+    return
+  }
+
+  const { data: user } = await (supabaseAdmin as any)
+    .from('users')
+    .select('id,metadata')
+    .eq('metadata->>creem_customer_id', customerId)
     .single()
 
   if (!user) return
 
-  // Downgrade to free tier
-  await supabaseAdmin
+  await (supabaseAdmin as any)
     .from('users')
     .update({
       tier: 'free',
       metadata: {
-        stripe_subscription_status: 'canceled',
+        ...(user.metadata || {}),
+        creem_subscription_status: status,
       },
     })
     .eq('id', user.id)
 
-  logger.billing('Subscription canceled', { userId: user.id })
-}
-
-// Handle successful invoice payment
-async function handleInvoicePaid(invoice: Stripe.Invoice) {
-  const customerId = invoice.customer as string
-
-  // Find user
-  const { data: user } = await supabaseAdmin
-    .from('users')
-    .select('id')
-    .eq('metadata->>stripe_customer_id', customerId)
-    .single()
-
-  if (!user) return
-
-  // Record invoice in database (optional)
-  // You can store invoice details in the invoices table
-
-  logger.billing('Invoice paid', {
+  logger.billing('Subscription canceled', {
+    provider: 'creem',
     userId: user.id,
-    amount: invoice.amount_paid,
-  })
-}
-
-// Handle failed invoice payment
-async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
-  const customerId = invoice.customer as string
-
-  // Find user
-  const { data: user } = await supabaseAdmin
-    .from('users')
-    .select('id, email')
-    .eq('metadata->>stripe_customer_id', customerId)
-    .single()
-
-  if (!user) return
-
-  // Send notification email (implement email service)
-  // For now, just log it
-  logger.warn('Invoice payment failed', {
-    userId: user.id,
-    email: user.email,
-    amount: invoice.amount_due,
+    subscriptionId,
   })
 }

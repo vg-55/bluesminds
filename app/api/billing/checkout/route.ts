@@ -4,7 +4,7 @@
 
 import { NextRequest } from 'next/server'
 import { createServerClient, supabaseAdmin } from '@/lib/supabase/client'
-import { createStripeCustomer, createCheckoutSession, STRIPE_PRICE_IDS } from '@/lib/billing/stripe'
+import { createCreemCheckout } from '@/lib/billing/creem'
 import { errorResponse, successResponse, ValidationError, AuthenticationError } from '@/lib/utils/errors'
 import { logger } from '@/lib/utils/logger'
 import { z } from 'zod'
@@ -36,10 +36,14 @@ export async function POST(request: NextRequest) {
 
     const { tier } = validated.data
 
+    if (!supabaseAdmin) {
+      throw new Error('Server misconfigured: supabaseAdmin unavailable')
+    }
+
     // Get user profile
     const { data: profile } = await supabaseAdmin
       .from('users')
-      .select('*')
+      .select('id,email,metadata')
       .eq('id', user.id)
       .single()
 
@@ -47,44 +51,39 @@ export async function POST(request: NextRequest) {
       throw new Error('User profile not found')
     }
 
-    // Create or get Stripe customer
-    let stripeCustomerId = profile.metadata?.stripe_customer_id as string | undefined
+    const existingCreemCustomerId = (profile as any).metadata?.creem_customer_id as
+      | string
+      | undefined
 
-    if (!stripeCustomerId) {
-      stripeCustomerId = await createStripeCustomer(
-        profile.email,
-        profile.full_name || undefined
-      )
+    // Create Creem checkout session
+    const { url: checkoutUrl, customerId: creemCustomerId, checkoutId } =
+      await createCreemCheckout({
+        tier,
+        userId: user.id,
+        email: (profile as any).email,
+        existingCustomerId: existingCreemCustomerId,
+        successUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing?success=true`,
+        cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing?canceled=true`,
+      })
 
-      // Save Stripe customer ID
-      await supabaseAdmin
+    // Persist customer id (if Creem returned one)
+    if (creemCustomerId && creemCustomerId !== existingCreemCustomerId) {
+      await (supabaseAdmin as any)
         .from('users')
         .update({
           metadata: {
-            ...profile.metadata,
-            stripe_customer_id: stripeCustomerId,
+            ...(profile as any).metadata,
+            creem_customer_id: creemCustomerId,
           },
         })
         .eq('id', user.id)
     }
 
-    // Get price ID for tier
-    const priceId = STRIPE_PRICE_IDS[tier]
-    if (!priceId) {
-      throw new Error(`Price ID not configured for tier: ${tier}`)
-    }
-
-    // Create checkout session
-    const checkoutUrl = await createCheckoutSession(
-      stripeCustomerId,
-      priceId,
-      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing?success=true`,
-      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing?canceled=true`
-    )
-
     logger.billing('Checkout session created', {
+      provider: 'creem',
       userId: user.id,
       tier,
+      checkoutId,
     })
 
     return successResponse({ url: checkoutUrl })

@@ -4,7 +4,7 @@
 
 import { NextRequest } from 'next/server'
 import { createServerClient, supabaseAdmin } from '@/lib/supabase/client'
-import { createBillingPortalSession } from '@/lib/billing/stripe'
+import { createCreemCustomerPortalLink } from '@/lib/billing/creem'
 import { errorResponse, successResponse, AuthenticationError } from '@/lib/utils/errors'
 import { logger } from '@/lib/utils/logger'
 
@@ -21,26 +21,29 @@ export async function POST(request: NextRequest) {
       throw new AuthenticationError('Not authenticated')
     }
 
-    // Get user profile with Stripe customer ID
+    if (!supabaseAdmin) {
+      throw new Error('Server misconfigured: supabaseAdmin unavailable')
+    }
+
+    // Get user profile with Creem customer ID
     const { data: profile } = await supabaseAdmin
       .from('users')
       .select('metadata')
       .eq('id', user.id)
       .single()
 
-    const stripeCustomerId = profile?.metadata?.stripe_customer_id as string | undefined
+    const creemCustomerId = (profile as any)?.metadata?.creem_customer_id as string | undefined
 
-    if (!stripeCustomerId) {
-      throw new Error('No Stripe customer ID found. Please subscribe first.')
+    if (!creemCustomerId) {
+      throw new Error('No billing customer found. Please subscribe first.')
     }
 
-    // Create billing portal session
-    const portalUrl = await createBillingPortalSession(
-      stripeCustomerId,
-      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing`
-    )
+    // Create customer portal link (Creem)
+    const { url: portalUrl } = await createCreemCustomerPortalLink({
+      customerId: creemCustomerId,
+    })
 
-    logger.billing('Billing portal session created', { userId: user.id })
+    logger.billing('Billing portal session created', { provider: 'creem', userId: user.id })
 
     return successResponse({ url: portalUrl })
   } catch (error) {

@@ -323,7 +323,7 @@ Before deploying to production, review:
 - [ ] Run database migrations
 - [ ] Set up Supabase production project
 - [ ] Configure LiteLLM servers
-- [ ] Set up Stripe (if using billing)
+- [ ] Set up Creem (if using billing)
 - [ ] Configure monitoring (Sentry, Logtail)
 - [ ] Set up uptime monitoring
 - [ ] Configure alerts
@@ -415,7 +415,7 @@ Before deploying to production, review:
 - [Next.js Docs](https://nextjs.org/docs)
 - [Supabase Docs](https://supabase.com/docs)
 - [LiteLLM Docs](https://docs.litellm.ai/)
-- [Stripe Docs](https://stripe.com/docs)
+- [Creem Docs](https://docs.creem.io/getting-started/introduction)
 - [Docker Docs](https://docs.docker.com/)
 - [Kubernetes Docs](https://kubernetes.io/docs/)
 
@@ -441,7 +441,7 @@ Before deploying to production, review:
 - ✅ Row Level Security (Supabase RLS)
 
 ### Recommendations
-- Enable Stripe webhook signature verification
+- Enable Creem webhook signature verification
 - Set up WAF (Web Application Firewall)
 - Implement DDoS protection
 - Regular security audits
@@ -455,19 +455,19 @@ Before deploying to production, review:
 ### Development
 - **URL:** http://localhost:3000
 - **Database:** Supabase (dev)
-- **Stripe:** Test mode
+- **Creem:** Test mode
 - **Monitoring:** Disabled
 
 ### Staging (Recommended)
 - **URL:** https://staging.your-domain.com
 - **Database:** Supabase (staging)
-- **Stripe:** Test mode
+- **Creem:** Test mode
 - **Monitoring:** Enabled
 
 ### Production
 - **URL:** https://your-domain.com
 - **Database:** Supabase (production)
-- **Stripe:** Live mode
+- **Creem:** Live mode
 - **Monitoring:** Enabled
 - **Backups:** Automated
 - **Alerts:** Configured

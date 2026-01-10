@@ -3,6 +3,9 @@ import { createServerClient, supabaseAdmin } from '@/lib/supabase/client';
 import { ensureUserProfile } from '@/lib/utils/ensure-user-profile';
 import { checkAdminAccess } from '@/lib/utils/check-admin';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerClient();

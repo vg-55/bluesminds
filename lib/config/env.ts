@@ -15,10 +15,12 @@ const clientEnvSchema = z.object({
 
   // App
   NEXT_PUBLIC_APP_URL: z.string().url(),
-  NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
+  // Default to "test" in unit tests to avoid requiring NODE_ENV in vitest.
+  NODE_ENV: z.enum(['development', 'staging', 'production', 'test']).default('test'),
 
-  // Stripe (public, optional)
-  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
+  // Creem (public, optional)
+  // (No client-side key required for Creem; keep billing server-driven)
+  NEXT_PUBLIC_CREEM_ENABLED: z.coerce.boolean().optional(),
 
   // Feature flags
   ENABLE_STREAMING: z.coerce.boolean().default(true),
@@ -42,9 +44,12 @@ const serverEnvSchema = clientEnvSchema.extend({
   LITELLM_SERVER_1_URL: z.preprocess((val) => val === '' ? undefined : val, z.string().url().optional()),
   LITELLM_SERVER_1_KEY: z.string().optional(),
 
-  // Stripe (server-only, optional)
-  STRIPE_SECRET_KEY: z.string().optional(),
-  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  // Creem (server-only, optional)
+  CREEM_API_KEY: z.string().optional(),
+  CREEM_WEBHOOK_SECRET: z.string().optional(),
+  CREEM_PRODUCT_STARTER: z.string().optional(),
+  CREEM_PRODUCT_PRO: z.string().optional(),
+  CREEM_PRODUCT_ENTERPRISE: z.string().optional(),
 
   // Redis (optional)
   REDIS_URL: z.preprocess((val) => val === '' ? undefined : val, z.string().url().optional()),
@@ -104,7 +109,7 @@ export const features = {
   webhooks: env.ENABLE_WEBHOOKS,
   caching: env.ENABLE_CACHING,
   referrals: env.ENABLE_REFERRALS,
-  billing: !!(env.STRIPE_SECRET_KEY && env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY),
+  billing: !!env.CREEM_API_KEY,
 }
 
 // Default rate limits

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, supabaseAdmin } from '@/lib/supabase/client';
 import { checkAdminAccess } from '@/lib/utils/check-admin';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 async function checkServerHealth(baseUrl: string, apiKey?: string) {
   try {
     const startTime = Date.now();

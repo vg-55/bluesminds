@@ -59,12 +59,12 @@ Complete guide for deploying BluesMinds AI Gateway to production.
    vercel env add API_KEY_SECRET
    vercel env add ADMIN_EMAILS
 
-   # Add Stripe variables if using billing
-   vercel env add STRIPE_SECRET_KEY
-   vercel env add STRIPE_WEBHOOK_SECRET
-   vercel env add STRIPE_PRICE_STARTER
-   vercel env add STRIPE_PRICE_PRO
-   vercel env add STRIPE_PRICE_ENTERPRISE
+   # Add Creem variables if using billing
+   vercel env add CREEM_API_KEY
+   vercel env add CREEM_WEBHOOK_SECRET
+   vercel env add CREEM_PRODUCT_STARTER
+   vercel env add CREEM_PRODUCT_PRO
+   vercel env add CREEM_PRODUCT_ENTERPRISE
    ```
 
 4. **Deploy**
@@ -72,9 +72,10 @@ Complete guide for deploying BluesMinds AI Gateway to production.
    vercel --prod
    ```
 
-5. **Configure Stripe webhook** (if using billing)
-   - Go to Stripe Dashboard → Webhooks
+5. **Configure Creem webhook** (if using billing)
+   - Go to Creem Dashboard → Webhooks
    - Add endpoint: `https://your-domain.vercel.app/api/billing/webhook`
+   - Set the webhook secret in `CREEM_WEBHOOK_SECRET`
    - Select events: `customer.subscription.*`, `invoice.paid`, `invoice.payment_failed`
    - Copy webhook secret and update in Vercel
 

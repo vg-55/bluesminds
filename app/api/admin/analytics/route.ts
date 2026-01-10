@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
       // Recent usage logs for analytics
       supabaseAdmin
         .from('usage_logs')
-        .select('provider, cost_usd, total_tokens, created_at')
+        .select('provider, cost_usd, total_tokens, token_source, created_at')
         .order('created_at', { ascending: false })
         .limit(1000),
 
@@ -71,15 +71,37 @@ export async function GET(request: NextRequest) {
         .limit(10),
     ])
 
-    // Calculate provider distribution
-    const providerStats: Record<string, { requests: number; cost: number }> = {}
+    // Calculate provider distribution with token accuracy
+    const providerStats: Record<string, {
+      requests: number
+      cost: number
+      actualTokens: number
+      estimatedTokens: number
+      unknownTokens: number
+    }> = {}
+
     usageLogs?.forEach((log) => {
       const provider = log.provider || 'unknown'
       if (!providerStats[provider]) {
-        providerStats[provider] = { requests: 0, cost: 0 }
+        providerStats[provider] = {
+          requests: 0,
+          cost: 0,
+          actualTokens: 0,
+          estimatedTokens: 0,
+          unknownTokens: 0,
+        }
       }
       providerStats[provider].requests += 1
       providerStats[provider].cost += parseFloat(log.cost_usd) || 0
+
+      // Track token source breakdown
+      if (log.token_source === 'actual') {
+        providerStats[provider].actualTokens += 1
+      } else if (log.token_source === 'estimated') {
+        providerStats[provider].estimatedTokens += 1
+      } else {
+        providerStats[provider].unknownTokens += 1
+      }
     })
 
     const totalCost = Object.values(providerStats).reduce((sum, p) => sum + p.cost, 0)
@@ -90,6 +112,9 @@ export async function GET(request: NextRequest) {
       percentage: totalReqs > 0 ? Math.round((stats.requests / totalReqs) * 100) : 0,
       requests: stats.requests,
       cost: `$${stats.cost.toFixed(2)}`,
+      tokenAccuracy: stats.requests > 0
+        ? Math.round((stats.actualTokens / stats.requests) * 100)
+        : 0,
     }))
 
     // Calculate average latency
@@ -173,6 +198,24 @@ export async function GET(request: NextRequest) {
         }
       })
 
+    // Calculate overall token accuracy
+    const tokenSourceCounts = usageLogs?.reduce(
+      (acc, log) => {
+        if (log.token_source === 'actual') acc.actual++
+        else if (log.token_source === 'estimated') acc.estimated++
+        else acc.unknown++
+        return acc
+      },
+      { actual: 0, estimated: 0, unknown: 0 }
+    ) || { actual: 0, estimated: 0, unknown: 0 }
+
+    const totalWithSource =
+      tokenSourceCounts.actual + tokenSourceCounts.estimated + tokenSourceCounts.unknown
+    const overallAccuracy =
+      totalWithSource > 0
+        ? Math.round((tokenSourceCounts.actual / totalWithSource) * 100)
+        : 0
+
     return NextResponse.json({
       platformStats: [
         {
@@ -194,6 +237,11 @@ export async function GET(request: NextRequest) {
           label: 'Avg Latency',
           value: `${avgLatency}ms`,
           change: avgLatency < 100 ? '-12ms' : '+5ms',
+        },
+        {
+          label: 'Token Accuracy',
+          value: `${overallAccuracy}%`,
+          change: `${tokenSourceCounts.actual}/${totalWithSource} actual`,
         },
       ],
       providerDistribution,

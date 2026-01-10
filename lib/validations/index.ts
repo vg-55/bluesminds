@@ -170,7 +170,7 @@ export const subscriptionUpdateSchema = z.object({
 
 export const paymentMethodSchema = z.object({
   type: z.enum(['card', 'bank_transfer']),
-  token: z.string(), // Stripe token or similar
+  token: z.string(), // Payment token (provider-specific)
 })
 
 // ----------------------------------------------------------------------------

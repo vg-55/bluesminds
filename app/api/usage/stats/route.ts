@@ -8,6 +8,9 @@ import { getUserUsageStats, getUsageByModel, getDailyUsageStats } from '@/lib/ga
 import { errorResponse, successResponse, AuthenticationError } from '@/lib/utils/errors'
 import { logger } from '@/lib/utils/logger'
 
+// Force dynamic rendering - no caching for real-time data
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     // Get current user

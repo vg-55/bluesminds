@@ -16,6 +16,7 @@ interface AnalyticsData {
     percentage: number;
     requests: number;
     cost: string;
+    tokenAccuracy: number;
   }>;
   topUsers: Array<{
     name: string;
@@ -154,7 +155,7 @@ export default function AdminAnalyticsPage() {
                         {provider.requests.toLocaleString()} requests
                       </span>
                       <span className="font-mono text-xs text-foreground/60">
-                        {provider.cost}
+                        {provider.cost} • {provider.tokenAccuracy}% accurate
                       </span>
                     </div>
                   </div>

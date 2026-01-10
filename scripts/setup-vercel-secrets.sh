@@ -55,6 +55,15 @@ echo "✅ Generated JWT_SECRET: ${JWT_SECRET:0:10}..."
 echo "✅ Generated API_KEY_SECRET: ${API_KEY_SECRET:0:10}..."
 echo ""
 
+# Prompt for Creem (optional)
+echo ""
+echo "🟣 Creem (optional) - press Enter to skip"
+read -p "Creem API Key: " CREEM_API_KEY
+read -p "Creem Webhook Secret: " CREEM_WEBHOOK_SECRET
+read -p "Creem Product ID - Starter: " CREEM_PRODUCT_STARTER
+read -p "Creem Product ID - Pro: " CREEM_PRODUCT_PRO
+read -p "Creem Product ID - Enterprise: " CREEM_PRODUCT_ENTERPRISE
+
 # Confirm before proceeding
 echo "⚠️  About to create the following secrets:"
 echo "   - supabase-url"
@@ -63,6 +72,13 @@ echo "   - supabase-service-role-key"
 echo "   - jwt-secret"
 echo "   - api-key-secret"
 echo "   - app-url"
+if [ ! -z "$CREEM_API_KEY" ]; then
+  echo "   - creem-api-key"
+  echo "   - creem-webhook-secret"
+  echo "   - creem-product-starter"
+  echo "   - creem-product-pro"
+  echo "   - creem-product-enterprise"
+fi
 echo ""
 read -p "Continue? (y/n): " -n 1 -r
 echo ""
@@ -95,6 +111,14 @@ add_secret "jwt-secret" "$JWT_SECRET"
 add_secret "api-key-secret" "$API_KEY_SECRET"
 add_secret "app-url" "$APP_URL"
 
+if [ ! -z "$CREEM_API_KEY" ]; then
+  add_secret "creem-api-key" "$CREEM_API_KEY"
+  add_secret "creem-webhook-secret" "$CREEM_WEBHOOK_SECRET"
+  add_secret "creem-product-starter" "$CREEM_PRODUCT_STARTER"
+  add_secret "creem-product-pro" "$CREEM_PRODUCT_PRO"
+  add_secret "creem-product-enterprise" "$CREEM_PRODUCT_ENTERPRISE"
+fi
+
 echo ""
 echo "✅ All secrets created successfully!"
 echo ""
@@ -105,6 +129,13 @@ echo "   - supabase-service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:0:20}..."
 echo "   - jwt-secret: ${JWT_SECRET:0:20}..."
 echo "   - api-key-secret: ${API_KEY_SECRET:0:20}..."
 echo "   - app-url: $APP_URL"
+if [ ! -z "$CREEM_API_KEY" ]; then
+  echo "   - creem-api-key: ${CREEM_API_KEY:0:10}..."
+  echo "   - creem-webhook-secret: ${CREEM_WEBHOOK_SECRET:0:10}..."
+  echo "   - creem-product-starter: $CREEM_PRODUCT_STARTER"
+  echo "   - creem-product-pro: $CREEM_PRODUCT_PRO"
+  echo "   - creem-product-enterprise: $CREEM_PRODUCT_ENTERPRISE"
+fi
 echo ""
 echo "🎉 Setup complete! You can now deploy to Vercel."
 echo ""

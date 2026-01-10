@@ -10,6 +10,9 @@ import { errorResponse, successResponse, ValidationError } from '@/lib/utils/err
 import { logger } from '@/lib/utils/logger'
 import { checkAdminAccess } from '@/lib/utils/check-admin'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 // GET /api/admin/servers - List all servers
 export async function GET(request: NextRequest) {
   try {

@@ -6,7 +6,7 @@ Get BluesMinds up and running in 5 minutes!
 
 - Node.js 18+ with pnpm
 - Supabase account (free tier works)
-- (Optional) Stripe account for billing
+- (Optional) Creem account for billing
 
 ## Step 1: Clone and Install (1 min)
 
@@ -104,22 +104,21 @@ You're done! You can now:
 - View usage statistics
 - Test the gateway endpoints
 
-The app will work without Stripe - billing features will just be disabled.
+The app will work without Creem - billing features will just be disabled.
 
 ### To Enable Billing
 
 Add these to `.env.local`:
 
 ```env
-STRIPE_SECRET_KEY=sk_test_...
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_PRICE_STARTER=price_...
-STRIPE_PRICE_PRO=price_...
-STRIPE_PRICE_ENTERPRISE=price_...
+CREEM_API_KEY=creem_...
+CREEM_WEBHOOK_SECRET=whsec_...
+CREEM_PRODUCT_STARTER=prod_...
+CREEM_PRODUCT_PRO=prod_...
+CREEM_PRODUCT_ENTERPRISE=prod_...
 ```
 
-See [SETUP.md](./SETUP.md) for detailed Stripe configuration.
+See [SETUP.md](./SETUP.md) for detailed Creem configuration.
 
 ### To Set Up LiteLLM Server
 
@@ -234,7 +233,7 @@ bluesminds/
 - **Architecture**: See [README.md](./README.md)
 - **LiteLLM Docs**: https://docs.litellm.ai/
 - **Supabase Docs**: https://supabase.com/docs
-- **Stripe Docs**: https://stripe.com/docs
+- **Creem Docs**: https://docs.creem.io/getting-started/introduction
 
 ## Production Checklist
 
@@ -243,7 +242,7 @@ Before deploying to production:
 - [ ] Use strong secrets (32+ characters)
 - [ ] Set `NODE_ENV=production`
 - [ ] Enable HTTPS
-- [ ] Configure Stripe webhooks with production URL
+- [ ] Configure Creem webhooks with production URL
 - [ ] Set up monitoring and logging
 - [ ] Configure database backups
 - [ ] Set up proper rate limiting

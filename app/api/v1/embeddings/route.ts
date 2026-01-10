@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
       promptTokens: usage?.promptTokens || estimatedTokens,
       completionTokens: 0,
       totalTokens: usage?.totalTokens || estimatedTokens,
+      tokenSource: usage?.source || 'estimated',
       responseTimeMs,
       statusCode: proxyResponse.status,
       isError,

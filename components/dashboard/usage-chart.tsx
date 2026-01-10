@@ -17,23 +17,37 @@ export function UsageChart({ userId }: UsageChartProps) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/usage/stats?group_by=daily')
-      .then((res) => res.json())
-      .then((result) => {
-        if (result.success) {
-          setData(
-            result.data.map((item: any) => ({
-              date: new Date(item.date).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              }),
-              requests: item.requests,
-            }))
-          )
-        }
+    const loadData = () => {
+      // Add timestamp to prevent caching
+      fetch(`/api/usage/stats?group_by=daily&_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
       })
-      .catch(console.error)
-      .finally(() => setLoading(false))
+        .then((res) => res.json())
+        .then((result) => {
+          if (result.success) {
+            setData(
+              result.data.map((item: any) => ({
+                date: new Date(item.date).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                }),
+                requests: item.requests,
+              }))
+            )
+          }
+        })
+        .catch(console.error)
+        .finally(() => setLoading(false))
+    }
+
+    loadData()
+
+    // Refresh every 30 seconds
+    const interval = setInterval(loadData, 30000)
+    return () => clearInterval(interval)
   }, [userId])
 
   return (

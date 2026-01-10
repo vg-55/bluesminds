@@ -6,7 +6,7 @@ This guide will help you set up and run BluesMinds AI Gateway from scratch.
 
 - Node.js 18+ and pnpm installed
 - Supabase account (https://supabase.com)
-- Stripe account (https://stripe.com) for billing
+- Creem account (https://docs.creem.io/getting-started/introduction) for billing
 - LiteLLM installed (optional for local testing)
 
 ## Step 1: Install Dependencies
@@ -81,20 +81,19 @@ To generate secure secrets, you can use:
 openssl rand -base64 32
 ```
 
-### 3.3 Stripe Configuration
+### 3.3 Creem Configuration
 
 ```env
-# Get these from Stripe Dashboard > Developers > API Keys
-STRIPE_SECRET_KEY=sk_test_...
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+# Get this from Creem Dashboard
+CREEM_API_KEY=creem_...
 
-# Get this from Stripe Dashboard > Developers > Webhooks
-STRIPE_WEBHOOK_SECRET=whsec_...
+# Get this from Creem Dashboard > Webhooks
+CREEM_WEBHOOK_SECRET=whsec_...
 
-# Create products and prices in Stripe Dashboard, then add their IDs
-STRIPE_PRICE_STARTER=price_...
-STRIPE_PRICE_PRO=price_...
-STRIPE_PRICE_ENTERPRISE=price_...
+# Create products in Creem, then add their IDs
+CREEM_PRODUCT_STARTER=prod_...
+CREEM_PRODUCT_PRO=prod_...
+CREEM_PRODUCT_ENTERPRISE=prod_...
 ```
 
 ### 3.4 Admin Configuration
@@ -104,11 +103,11 @@ STRIPE_PRICE_ENTERPRISE=price_...
 ADMIN_EMAILS=admin@example.com,admin2@example.com
 ```
 
-## Step 4: Stripe Setup
+## Step 4: Creem Setup
 
 ### 4.1 Create Products and Prices
 
-1. Go to Stripe Dashboard > Products
+1. Go to Creem Dashboard > Products
 2. Create three products:
    - **Starter**: $29/month
      - 1M tokens/day
@@ -120,23 +119,18 @@ ADMIN_EMAILS=admin@example.com,admin2@example.com
      - Unlimited tokens
      - 5000 req/min
 
-3. Copy the Price IDs and add them to `.env.local`
+3. Copy the Product IDs and add them to `.env.local`
 
 ### 4.2 Setup Webhook Endpoint
 
-1. Go to Stripe Dashboard > Developers > Webhooks
+1. Go to Creem Dashboard > Webhooks
 2. Add endpoint: `https://your-domain.com/api/billing/webhook`
-3. Select these events:
-   - `customer.subscription.created`
-   - `customer.subscription.updated`
-   - `customer.subscription.deleted`
-   - `invoice.paid`
-   - `invoice.payment_failed`
-4. Copy the webhook signing secret to `.env.local`
+3. Configure the webhook secret and set it as `CREEM_WEBHOOK_SECRET`
 
-For local testing, use Stripe CLI:
+For local testing, use a tunnel (e.g. ngrok) to expose your local server:
 ```bash
-stripe listen --forward-to localhost:3000/api/billing/webhook
+ngrok http 3000
+# then set webhook endpoint to: https://<id>.ngrok-free.app/api/billing/webhook
 ```
 
 ## Step 5: LiteLLM Server Setup
@@ -288,10 +282,11 @@ print(response.choices[0].message.content)
 - **Solution**: Check your user tier limits in the database
 - Default free tier: 60 RPM, 90K TPM
 
-**Error**: Stripe webhook signature verification failed
+**Error**: Creem webhook signature verification failed
 - **Solution**:
-  1. Verify `STRIPE_WEBHOOK_SECRET` is correct
-  2. For local testing, use Stripe CLI webhook forwarding
+  1. Verify `CREEM_WEBHOOK_SECRET` is correct
+  2. Ensure the webhook signature header matches (default: `creem-signature`)
+  3. For local testing, ensure your tunnel forwards the raw request body unchanged
 
 ### Database Issues
 
@@ -331,7 +326,7 @@ NODE_ENV=production
 ### Security Checklist
 
 - [ ] Use strong secrets (32+ characters)
-- [ ] Enable HTTPS (required for Stripe webhooks)
+- [ ] Enable HTTPS (required for Creem webhooks)
 - [ ] Configure CORS if needed
 - [ ] Set up rate limiting at infrastructure level
 - [ ] Enable Supabase Auth email verification
@@ -342,7 +337,7 @@ NODE_ENV=production
 
 ## Next Steps
 
-1. **Customize Pricing**: Adjust tiers and pricing in Stripe and database
+1. **Customize Pricing**: Adjust tiers and pricing in Creem and database
 2. **Add Models**: Configure more LLM providers in LiteLLM
 3. **Set Up Monitoring**: Implement logging and monitoring
 4. **Customize UI**: Update branding and styling
