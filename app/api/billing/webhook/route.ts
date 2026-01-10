@@ -95,18 +95,23 @@ async function handleCheckoutCompleted(event: { id?: string; type: string; data?
 
   const tier = mapCreemProductToTier(productId)
 
+  // Production schema may not have `users.metadata`; only update known columns.
   await (supabaseAdmin as any)
     .from('users')
     .update({
       tier,
-      metadata: {
-        creem_customer_id: customerId,
-        creem_subscription_id: subscriptionId,
-        creem_subscription_status: status,
-        creem_product_id: productId,
-      },
     })
     .eq('id', userId)
+
+  if (customerId || subscriptionId || productId || status) {
+    logger.warn('Creem identifiers not persisted (users.metadata not available)', {
+      userId,
+      customerId,
+      subscriptionId,
+      productId,
+      status,
+    })
+  }
 
   logger.billing('Checkout completed', {
     provider: 'creem',
@@ -129,13 +134,12 @@ async function handleSubscriptionUpsert(event: { id?: string; type: string; data
   // Prefer mapping by customer id; fallback to metadata userId if present.
   let userId: string | undefined
 
+  // Production schema may not have `users.metadata`; cannot map by stored customer id.
   if (customerId) {
-    const { data: user } = await (supabaseAdmin as any)
-      .from('users')
-      .select('id,metadata')
-      .eq('metadata->>creem_customer_id', customerId)
-      .single()
-    userId = user?.id
+    logger.warn('Cannot map Creem customerId to user via users.metadata (column not available)', {
+      customerId,
+      eventId: event.id,
+    })
   }
 
   if (!userId) {
@@ -151,18 +155,23 @@ async function handleSubscriptionUpsert(event: { id?: string; type: string; data
     return
   }
 
+  // Production schema may not have `users.metadata`; only update known columns.
   await (supabaseAdmin as any)
     .from('users')
     .update({
       tier,
-      metadata: {
-        creem_customer_id: customerId,
-        creem_subscription_id: subscriptionId,
-        creem_subscription_status: status,
-        creem_product_id: productId,
-      },
     })
     .eq('id', userId)
+
+  if (customerId || subscriptionId || productId || status) {
+    logger.warn('Creem identifiers not persisted (users.metadata not available)', {
+      userId,
+      customerId,
+      subscriptionId,
+      productId,
+      status,
+    })
+  }
 
   logger.billing('Subscription updated', {
     provider: 'creem',
@@ -184,28 +193,14 @@ async function handleSubscriptionCanceled(event: { id?: string; type: string; da
     return
   }
 
-  const { data: user } = await (supabaseAdmin as any)
-    .from('users')
-    .select('id,metadata')
-    .eq('metadata->>creem_customer_id', customerId)
-    .single()
-
-  if (!user) return
-
-  await (supabaseAdmin as any)
-    .from('users')
-    .update({
-      tier: 'free',
-      metadata: {
-        ...(user.metadata || {}),
-        creem_subscription_status: status,
-      },
-    })
-    .eq('id', user.id)
-
-  logger.billing('Subscription canceled', {
-    provider: 'creem',
-    userId: user.id,
+  // Production schema may not have `users.metadata`; cannot map by stored customer id.
+  logger.warn('Cannot process subscription cancel by customerId (users.metadata not available)', {
+    eventId: event.id,
+    customerId,
     subscriptionId,
   })
+  return
+
+  // Note: without `users.metadata`, we cannot reliably map cancel events to a user record.
+  // Intentionally no-op beyond logging above.
 }

@@ -42,14 +42,9 @@ export async function POST(request: NextRequest) {
       throw new Error('Server misconfigured: supabaseAdmin unavailable')
     }
 
-    // Get user profile with Creem customer ID
-    const { data: profile } = await supabaseAdmin
-      .from('users')
-      .select('metadata')
-      .eq('id', user.id)
-      .single()
-
-    const creemCustomerId = (profile as any)?.metadata?.creem_customer_id as string | undefined
+    // Production schema may not have `users.metadata`, so we cannot read a stored customer id.
+    // The portal requires an existing customer id; without persistence, we must fail with a clear message.
+    const creemCustomerId: string | undefined = undefined
 
     if (!creemCustomerId) {
       throw new Error('No billing customer found. Please subscribe first.')

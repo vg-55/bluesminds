@@ -72,9 +72,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user profile (after ensure)
+    // NOTE: Production schema may not have `users.metadata`, so do not select it.
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('users')
-      .select('id,email,metadata')
+      .select('id,email')
       .eq('id', user.id)
       .single()
 
@@ -86,9 +87,8 @@ export async function POST(request: NextRequest) {
       throw new Error('Failed to load user profile')
     }
 
-    const existingCreemCustomerId = (profile as any).metadata?.creem_customer_id as
-      | string
-      | undefined
+    // Backward-compatible: if `users.metadata` doesn't exist, we cannot read a stored customer id.
+    const existingCreemCustomerId: string | undefined = undefined
 
     // Create Creem checkout session
     const { url: checkoutUrl, customerId: creemCustomerId, checkoutId } =
@@ -101,17 +101,12 @@ export async function POST(request: NextRequest) {
         cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing?canceled=true`,
       })
 
-    // Persist customer id (if Creem returned one)
-    if (creemCustomerId && creemCustomerId !== existingCreemCustomerId) {
-      await (supabaseAdmin as any)
-        .from('users')
-        .update({
-          metadata: {
-            ...(profile as any).metadata,
-            creem_customer_id: creemCustomerId,
-          },
-        })
-        .eq('id', user.id)
+    // Backward-compatible: do not persist to `users.metadata` (column may not exist in production).
+    if (creemCustomerId) {
+      logger.warn('Creem customer id not persisted (users.metadata not available)', {
+        userId: user.id,
+        creemCustomerId,
+      })
     }
 
     logger.billing('Checkout session created', {
