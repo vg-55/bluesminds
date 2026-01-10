@@ -24,9 +24,9 @@ where idempotency_key is null
    or finalized_at is null
    or estimated_total_tokens is null;
 
--- Enforce idempotency per API key
+-- Enforce idempotency per API key (must include partition key created_at)
 create unique index if not exists usage_logs_api_key_id_idempotency_key_uidx
-  on public.usage_logs (api_key_id, idempotency_key);
+  on public.usage_logs (api_key_id, idempotency_key, created_at);
 
 create index if not exists usage_logs_user_id_created_at_idx
   on public.usage_logs (user_id, created_at desc);
