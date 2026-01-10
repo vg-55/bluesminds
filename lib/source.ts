@@ -4,14 +4,17 @@ import { loader } from 'fumadocs-core/source';
 // Create proper file structure for loader
 const files = [
   ...docs.map((doc) => {
-    // In Fumadocs v13, the data object contains everything we need
-    const { default: MDXContent, ...frontmatter } = doc.data;
+    // Handle MDX data - check if default export exists
+    const MDXContent = doc.data?.default;
+    const frontmatter = { ...doc.data };
+    delete frontmatter.default;
+
     return {
       type: 'page' as const,
       path: doc.info.path.replace(/\.mdx?$/, ''),
       data: {
         ...frontmatter,
-        body: MDXContent,
+        body: MDXContent || (() => null),
         title: frontmatter.title || doc.info.path,
         description: frontmatter.description || '',
       },
