@@ -1,0 +1,62 @@
+---
+title: Authentication
+description: Learn how to authenticate your requests to the BluesMinds API
+---
+
+# Authentication
+
+Learn how to authenticate your requests to the BluesMinds API.
+
+## API Keys
+
+BluesMinds uses API keys to authenticate requests. You can create and manage your API keys from the [dashboard](/dashboard/keys).
+
+## Key Types
+
+### Test Keys
+
+**Prefix:** `bm_test_`
+
+Test keys have limited quotas and are meant for development and testing purposes only.
+
+### Live Keys
+
+**Prefix:** `bm_live_`
+
+Live keys are for production use and have full access to your account's quota and features.
+
+## Making Authenticated Requests
+
+Include your API key in the Authorization header:
+
+```bash
+Authorization: Bearer bm_live_abc123def456ghi789jkl
+```
+
+## Using the SDK
+
+The SDK automatically handles authentication when you provide your API key:
+
+```typescript
+import { BluesMinds } from '@bluesminds/sdk';
+
+const client = new BluesMinds({
+  apiKey: process.env.BLUESMINDS_API_KEY
+});
+
+// All requests are automatically authenticated
+const response = await client.chat.completions.create({
+  model: 'gpt-4',
+  messages: [{ role: 'user', content: 'Hello!' }]
+});
+```
+
+<Callout type="warn">
+## Security Best Practices
+
+- Never commit API keys to version control
+- Store keys in environment variables
+- Rotate keys regularly
+- Use test keys for development
+- Delete unused keys immediately
+</Callout>

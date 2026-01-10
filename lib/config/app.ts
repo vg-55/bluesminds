@@ -54,9 +54,12 @@ export const modelPricingRequests: Record<string, number> = {
   // Anthropic Claude 4 series (newer models)
   'claude-opus-4': 0.015,
   'claude-opus-4.5': 0.015,
+  'claude-opus-4-5-20251031': 0.015,      // Latest Opus 4.5 with date
   'claude-sonnet-4': 0.008,
   'claude-sonnet-4.5': 0.008,
+  'claude-sonnet-4-5-20250929': 0.008,    // Latest Sonnet 4.5 with date
   'claude-haiku-4': 0.003,
+  'claude-haiku-4-0-20250101': 0.003,     // Latest Haiku 4.0 with date
 
   // Google
   'gemini-pro': 0.002,
@@ -130,9 +133,12 @@ export const modelPricing: Record<string, { input: number; output: number }> = {
   // Anthropic Claude 4 series (newer models)
   'claude-opus-4': { input: 0.015, output: 0.075 },
   'claude-opus-4.5': { input: 0.015, output: 0.075 },
+  'claude-opus-4-5-20251031': { input: 0.015, output: 0.075 },      // Latest Opus 4.5 with date
   'claude-sonnet-4': { input: 0.003, output: 0.015 },
   'claude-sonnet-4.5': { input: 0.003, output: 0.015 },
+  'claude-sonnet-4-5-20250929': { input: 0.003, output: 0.015 },    // Latest Sonnet 4.5 with date
   'claude-haiku-4': { input: 0.00025, output: 0.00125 },
+  'claude-haiku-4-0-20250101': { input: 0.00025, output: 0.00125 }, // Latest Haiku 4.0 with date
 
   // Google
   'gemini-pro': { input: 0.00025, output: 0.0005 },

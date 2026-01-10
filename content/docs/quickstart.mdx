@@ -1,0 +1,97 @@
+---
+title: Quick Start
+description: Get started with BluesMinds in under 5 minutes
+---
+
+# Quick *Start*
+
+Get started with BluesMinds in under 5 minutes.
+
+## Installation
+
+Install the BluesMinds SDK using your preferred package manager:
+
+```bash
+npm install @bluesminds/sdk
+# or
+yarn add @bluesminds/sdk
+# or
+pnpm add @bluesminds/sdk
+```
+
+## Initialize the Client
+
+Create a new client instance with your API key:
+
+```typescript
+import { BluesMinds } from '@bluesminds/sdk';
+
+const client = new BluesMinds({
+  apiKey: process.env.BLUESMINDS_API_KEY
+});
+```
+
+## Make Your First Request
+
+Send a chat completion request to any supported model:
+
+```typescript
+const response = await client.chat.completions.create({
+  model: 'gpt-4',
+  messages: [
+    { role: 'user', content: 'Hello! How are you?' }
+  ]
+});
+
+console.log(response.choices[0].message.content);
+```
+
+## Use Different Providers
+
+Switch between providers seamlessly by changing the model name:
+
+```typescript
+// OpenAI
+await client.chat.completions.create({
+  model: 'gpt-4',
+  messages: [{ role: 'user', content: 'Hello!' }]
+});
+
+// Anthropic (Latest Claude 4.5)
+await client.chat.completions.create({
+  model: 'claude-sonnet-4.5',
+  messages: [{ role: 'user', content: 'Hello!' }]
+});
+
+// Google
+await client.chat.completions.create({
+  model: 'gemini-pro',
+  messages: [{ role: 'user', content: 'Hello!' }]
+});
+```
+
+## Error Handling
+
+Handle errors gracefully with try-catch blocks:
+
+```typescript
+try {
+  const response = await client.chat.completions.create({
+    model: 'gpt-4',
+    messages: [{ role: 'user', content: 'Hello!' }]
+  });
+  console.log(response);
+} catch (error) {
+  if (error.code === 'rate_limit_exceeded') {
+    console.error('Rate limit exceeded');
+  } else if (error.code === 'authentication_error') {
+    console.error('Invalid API key');
+  } else {
+    console.error('An error occurred:', error.message);
+  }
+}
+```
+
+## Next Steps
+
+**Next Steps:** Learn about [authentication](/docs/authentication), explore the [API reference](/docs/api/chat), or check out our [routing strategies guide](/docs/guides/routing).

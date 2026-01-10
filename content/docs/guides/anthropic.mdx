@@ -1,0 +1,457 @@
+---
+title: Anthropic Claude Guide
+description: Complete guide to using Anthropic's Claude models through BluesMinds Gateway
+---
+
+# Anthropic *Claude* Guide
+
+Learn how to use Anthropic's Claude models through the BluesMinds Gateway.
+
+## Available Models
+
+### Claude 4.5 Series (Latest)
+
+The newest generation of Claude models with enhanced capabilities:
+
+| Model | Description | Best For | Pricing |
+|-------|-------------|----------|---------|
+| **claude-opus-4.5** | Most capable model | Complex reasoning, analysis, creative tasks | $15/$75 per MTok |
+| **claude-sonnet-4.5** | Balanced performance | General-purpose, most use cases | $3/$15 per MTok |
+| **claude-haiku-4** | Fastest model | Simple tasks, high throughput | $0.25/$1.25 per MTok |
+
+### Claude 3 Series
+
+Previous generation, still highly capable:
+
+| Model | Pricing |
+|-------|---------|
+| claude-3-opus | $15/$75 per MTok |
+| claude-3-sonnet | $3/$15 per MTok |
+| claude-3-haiku | $0.25/$1.25 per MTok |
+
+## Quick Start
+
+### Basic Chat Completion
+
+```typescript
+const response = await fetch('https://api.bluesminds.com/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer your_api_key',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    model: 'claude-sonnet-4.5',
+    messages: [
+      {
+        role: 'user',
+        content: 'Explain quantum computing in simple terms.'
+      }
+    ]
+  })
+});
+
+const data = await response.json();
+console.log(data.choices[0].message.content);
+```
+
+### With System Prompt
+
+Claude models benefit from clear system prompts:
+
+```typescript
+{
+  model: 'claude-sonnet-4.5',
+  messages: [
+    {
+      role: 'system',
+      content: 'You are a helpful coding assistant specializing in TypeScript.'
+    },
+    {
+      role: 'user',
+      content: 'How do I create a type-safe API client?'
+    }
+  ],
+  temperature: 0.7,
+  max_tokens: 2000
+}
+```
+
+### Streaming Responses
+
+Get responses as they're generated:
+
+```typescript
+const response = await fetch('https://api.bluesminds.com/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer your_api_key',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    model: 'claude-sonnet-4.5',
+    messages: [{ role: 'user', content: 'Write a short story.' }],
+    stream: true
+  })
+});
+
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+
+  const chunk = decoder.decode(value);
+  const lines = chunk.split('\n').filter(line => line.trim());
+
+  for (const line of lines) {
+    if (line.startsWith('data: ')) {
+      const data = line.slice(6);
+      if (data === '[DONE]') continue;
+
+      try {
+        const parsed = JSON.parse(data);
+        const content = parsed.choices[0]?.delta?.content;
+        if (content) {
+          process.stdout.write(content);
+        }
+      } catch (e) {
+        // Skip invalid JSON
+      }
+    }
+  }
+}
+```
+
+## Model Selection Guide
+
+### When to Use Opus 4.5
+
+**Best for:**
+- Complex reasoning and analysis
+- Long-form content creation
+- Code generation and review
+- Research and summarization
+- Tasks requiring nuanced understanding
+
+**Example use cases:**
+- Legal document analysis
+- Technical architecture design
+- Creative writing
+- Advanced problem-solving
+
+### When to Use Sonnet 4.5
+
+**Best for:**
+- General-purpose applications
+- Balanced cost and performance
+- Most production workloads
+- Interactive applications
+
+**Example use cases:**
+- Customer support chatbots
+- Content generation
+- Code assistance
+- Data analysis
+- Question answering
+
+### When to Use Haiku 4
+
+**Best for:**
+- High-throughput applications
+- Simple, straightforward tasks
+- Cost-sensitive workloads
+- Quick responses
+
+**Example use cases:**
+- Content moderation
+- Classification tasks
+- Simple Q&A
+- Data extraction
+- Sentiment analysis
+
+## Best Practices
+
+### 1. Temperature Settings
+
+Claude models respond well to temperature tuning:
+
+```typescript
+{
+  temperature: 0.0,   // Deterministic, factual responses
+  temperature: 0.7,   // Balanced creativity (recommended)
+  temperature: 1.0    // More creative, varied responses
+}
+```
+
+### 2. Token Management
+
+Set appropriate max_tokens to control response length:
+
+```typescript
+{
+  max_tokens: 500,    // Short responses
+  max_tokens: 2000,   // Medium responses (recommended)
+  max_tokens: 4096    // Long-form content
+}
+```
+
+### 3. Message Structure
+
+Use clear role distinctions:
+
+```typescript
+{
+  messages: [
+    { role: 'system', content: 'Set context and behavior' },
+    { role: 'user', content: 'User input' },
+    { role: 'assistant', content: 'Previous response' },
+    { role: 'user', content: 'Follow-up question' }
+  ]
+}
+```
+
+### 4. Error Handling
+
+Handle Claude-specific errors:
+
+```typescript
+try {
+  const response = await fetch('https://api.bluesminds.com/v1/chat/completions', {
+    // ... request config
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+
+    if (error.error?.type === 'overloaded_error') {
+      // Retry with exponential backoff
+      await sleep(1000);
+      return retry();
+    }
+
+    throw new Error(error.error?.message || 'Request failed');
+  }
+} catch (error) {
+  console.error('Claude API error:', error);
+}
+```
+
+## Multi-Provider Setup
+
+Use BluesMinds' multi-provider load balancing for Claude:
+
+### Configure Multiple Providers
+
+```typescript
+// Setup multiple Anthropic endpoints for redundancy
+const providers = [
+  {
+    name: 'Anthropic Primary',
+    base_url: 'https://api.anthropic.com',
+    priority: 1,
+    weight: 1.0
+  },
+  {
+    name: 'Anthropic Backup',
+    base_url: 'https://api.anthropic.com',
+    priority: 2,
+    weight: 1.0
+  }
+];
+```
+
+### Custom Model Mappings
+
+Map custom names to Claude models:
+
+```typescript
+// Create custom model mapping
+POST /api/admin/models
+{
+  custom_name: 'my-ai-assistant',
+  provider_id: 'anthropic-provider-id',
+  actual_model_name: 'claude-sonnet-4.5',
+  is_active: true
+}
+
+// Use your custom name
+fetch('https://api.bluesminds.com/v1/chat/completions', {
+  body: JSON.stringify({
+    model: 'my-ai-assistant',  // Maps to claude-sonnet-4.5
+    messages: [/* ... */]
+  })
+});
+```
+
+## Rate Limits
+
+Default rate limits for Claude models through BluesMinds:
+
+- **Requests per minute (RPM)**: 60
+- **Tokens per minute (TPM)**: 100,000
+
+Configure custom limits per API key:
+
+```typescript
+POST /api/keys
+{
+  name: 'Production Key',
+  rate_limit_rpm: 120,
+  rate_limit_tpm: 200000
+}
+```
+
+## Pricing Optimization
+
+### Cost-Effective Strategies
+
+1. **Use the right model**: Start with Sonnet 4.5, upgrade to Opus only when needed
+2. **Set max_tokens wisely**: Don't over-allocate tokens
+3. **Implement caching**: Cache common responses
+4. **Monitor usage**: Track costs via the dashboard
+
+### Cost Comparison Example
+
+For 1M input tokens + 1M output tokens:
+
+| Model | Cost |
+|-------|------|
+| Haiku 4 | $1.50 |
+| Sonnet 4.5 | $18 |
+| Opus 4.5 | $90 |
+
+## Advanced Features
+
+### Context Window
+
+All Claude models support large context windows:
+
+- **Claude 4.5 series**: 200K tokens
+- **Claude 3 series**: 200K tokens
+
+### Supported Features
+
+- ✅ Streaming responses
+- ✅ System prompts
+- ✅ Multi-turn conversations
+- ✅ Function calling (via LiteLLM)
+- ✅ JSON mode
+- ✅ Temperature control
+
+## Monitoring & Analytics
+
+Track Claude usage in your dashboard:
+
+1. **Usage Logs**: View all Claude requests at `/dashboard/logs`
+2. **Analytics**: See provider distribution at `/admin/analytics`
+3. **Cost Tracking**: Monitor spending by model
+4. **Performance**: Track response times and error rates
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue**: Responses are slow
+- **Solution**: Use Haiku 4 for faster responses or enable streaming
+
+**Issue**: High costs
+- **Solution**: Switch to Sonnet 4.5 or Haiku 4 for most tasks
+
+**Issue**: Rate limit errors
+- **Solution**: Request higher limits or implement request queuing
+
+**Issue**: Empty responses
+- **Solution**: Check max_tokens setting and increase if needed
+
+## Example Applications
+
+### 1. Customer Support Bot
+
+```typescript
+const response = await fetch('https://api.bluesminds.com/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer your_api_key',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    model: 'claude-sonnet-4.5',
+    messages: [
+      {
+        role: 'system',
+        content: 'You are a friendly customer support agent. Be helpful, concise, and empathetic.'
+      },
+      {
+        role: 'user',
+        content: customerQuery
+      }
+    ],
+    temperature: 0.7,
+    max_tokens: 1000
+  })
+});
+```
+
+### 2. Code Review Assistant
+
+```typescript
+const response = await fetch('https://api.bluesminds.com/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer your_api_key',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    model: 'claude-opus-4.5',  // Use Opus for complex code analysis
+    messages: [
+      {
+        role: 'system',
+        content: 'You are an expert code reviewer. Provide detailed, constructive feedback on code quality, security, and best practices.'
+      },
+      {
+        role: 'user',
+        content: `Review this code:\n\n${codeToReview}`
+      }
+    ],
+    temperature: 0.3,  // Lower temperature for focused analysis
+    max_tokens: 3000
+  })
+});
+```
+
+### 3. Content Generator
+
+```typescript
+const response = await fetch('https://api.bluesminds.com/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer your_api_key',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    model: 'claude-sonnet-4.5',
+    messages: [
+      {
+        role: 'system',
+        content: 'You are a creative content writer. Write engaging, SEO-friendly content.'
+      },
+      {
+        role: 'user',
+        content: `Write a blog post about: ${topic}`
+      }
+    ],
+    temperature: 0.9,  // Higher temperature for creativity
+    max_tokens: 2000,
+    stream: true  // Stream for better UX
+  })
+});
+```
+
+## Next Steps
+
+- Explore [API Reference](/docs/api/chat) for detailed parameters
+- Learn about [Multi-Provider Load Balancing](/docs/guides/multi-provider)
+- View [Model Comparison](/docs/guides/models) for all available models
+- Check [Pricing](/pricing) for current rates

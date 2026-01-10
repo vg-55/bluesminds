@@ -310,6 +310,42 @@ export function extractProviderFromModel(model: string): string | undefined {
   return undefined
 }
 
+// Format Anthropic-specific error messages for better user feedback
+export function formatAnthropicError(error: any): string {
+  // Handle Anthropic error response format
+  if (error?.error?.type) {
+    switch (error.error.type) {
+      case 'invalid_request_error':
+        return `Invalid request: ${error.error.message || 'Please check your request parameters'}`
+      case 'authentication_error':
+        return 'Invalid Anthropic API key. Please check your credentials.'
+      case 'permission_error':
+        return 'Permission denied. Your API key may not have access to this model.'
+      case 'not_found_error':
+        return 'Model or resource not found. Please check the model name.'
+      case 'rate_limit_error':
+        return 'Rate limit exceeded. Please try again later or upgrade your plan.'
+      case 'api_error':
+        return `Anthropic API error: ${error.error.message || 'Internal server error'}`
+      case 'overloaded_error':
+        return 'Anthropic servers are currently overloaded. Please try again in a moment.'
+      default:
+        return error.error.message || 'Unknown Anthropic error occurred'
+    }
+  }
+
+  // Fallback for non-standard error format
+  if (typeof error === 'string') {
+    return error
+  }
+
+  if (error?.message) {
+    return error.message
+  }
+
+  return 'Unknown error from Anthropic'
+}
+
 // Check if response indicates an error
 export function isErrorResponse(status: number): boolean {
   return status >= 400

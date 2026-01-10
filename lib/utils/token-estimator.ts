@@ -81,6 +81,14 @@ export function estimateTokensImproved(
     charRatio = 3.5
   }
 
+  // Model-specific tuning for better accuracy
+  if (model?.includes('claude')) {
+    // Claude models: slightly different tokenization than GPT
+    // Empirically: ~3.8 chars/token for English text
+    // Claude tends to use fewer tokens for the same content
+    charRatio = hasCode ? 2.3 : (hasJson ? 2.8 : 3.8)
+  }
+
   // Calculate prompt tokens
   const promptTokens = Math.ceil(promptChars / charRatio)
 

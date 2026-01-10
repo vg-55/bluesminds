@@ -1,0 +1,14 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "quickstart",
+    "authentication"
+  ],
+  "---Getting Started---": {
+    "type": "separator"
+  },
+  "---API Reference---": {
+    "type": "separator"
+  }
+}

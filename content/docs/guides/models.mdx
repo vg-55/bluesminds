@@ -1,0 +1,469 @@
+---
+title: Models Overview
+description: Compare and choose the right AI model for your use case
+---
+
+# Models *Overview*
+
+Choose the right AI model for your specific needs based on capability, speed, and cost.
+
+## Model Comparison Matrix
+
+| Provider | Model | Intelligence | Speed | Cost | Best For |
+|----------|-------|-------------|-------|------|----------|
+| **Anthropic** | claude-opus-4.5 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | $$$$ | Complex analysis, research |
+| **OpenAI** | gpt-4-turbo | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | $$$ | General-purpose, fast |
+| **Anthropic** | claude-sonnet-4.5 | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | $$ | Balanced, production |
+| **Google** | gemini-1.5-pro | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | $$ | Multimodal, vision |
+| **OpenAI** | gpt-4o | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | $$ | Fast, efficient |
+| **Google** | gemini-1.5-flash | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | $ | High throughput |
+| **Anthropic** | claude-haiku-4 | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | $ | Simple, fast tasks |
+| **OpenAI** | gpt-3.5-turbo | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | $ | Budget-friendly |
+
+## By Provider
+
+### Anthropic Claude
+
+**Latest: Claude 4.5 Series**
+
+```typescript
+// Most capable
+{ model: 'claude-opus-4.5' }    // $15/$75 per MTok
+
+// Recommended for most use cases
+{ model: 'claude-sonnet-4.5' }  // $3/$15 per MTok
+
+// Fastest, most economical
+{ model: 'claude-haiku-4' }     // $0.25/$1.25 per MTok
+```
+
+**Strengths:**
+- Excellent at reasoning and analysis
+- Strong performance on code tasks
+- 200K token context window
+- Detailed, nuanced responses
+
+**Use cases:**
+- Code generation and review
+- Research and analysis
+- Creative writing
+- Complex problem-solving
+
+### OpenAI
+
+**Latest Models**
+
+```typescript
+// Most advanced
+{ model: 'gpt-4-turbo' }        // $10/$30 per MTok
+
+// Optimized variant
+{ model: 'gpt-4o' }             // $5/$15 per MTok
+
+// Budget option
+{ model: 'gpt-3.5-turbo' }      // $0.50/$1.50 per MTok
+```
+
+**Strengths:**
+- Broad general knowledge
+- Fast inference
+- Well-established ecosystem
+- Function calling support
+
+**Use cases:**
+- Chat applications
+- Content generation
+- Data extraction
+- API integration
+
+### Google Gemini
+
+**Latest Models**
+
+```typescript
+// Most capable
+{ model: 'gemini-1.5-pro' }     // $1.25/$5 per MTok
+
+// Fastest
+{ model: 'gemini-1.5-flash' }   // $0.125/$0.50 per MTok
+```
+
+**Strengths:**
+- Multimodal (text, images, video)
+- Large context window (1M+ tokens)
+- Cost-effective
+- Fast processing
+
+**Use cases:**
+- Vision tasks
+- Long document analysis
+- Multimodal applications
+- Cost-sensitive workloads
+
+## By Use Case
+
+### Code Generation & Review
+
+**Recommended:**
+1. **claude-opus-4.5** - Most accurate, best for complex code
+2. **gpt-4-turbo** - Fast, reliable
+3. **claude-sonnet-4.5** - Balanced option
+
+```typescript
+{
+  model: 'claude-opus-4.5',
+  messages: [
+    {
+      role: 'system',
+      content: 'You are an expert software engineer.'
+    },
+    {
+      role: 'user',
+      content: 'Review this TypeScript code for bugs and improvements...'
+    }
+  ],
+  temperature: 0.3  // Lower for precision
+}
+```
+
+### Customer Support
+
+**Recommended:**
+1. **claude-sonnet-4.5** - Natural, empathetic responses
+2. **gpt-4o** - Fast, reliable
+3. **claude-haiku-4** - High volume, simple queries
+
+```typescript
+{
+  model: 'claude-sonnet-4.5',
+  messages: [
+    {
+      role: 'system',
+      content: 'You are a helpful customer support agent.'
+    },
+    {
+      role: 'user',
+      content: customerQuery
+    }
+  ],
+  temperature: 0.7,
+  stream: true  // Better UX
+}
+```
+
+### Content Generation
+
+**Recommended:**
+1. **claude-opus-4.5** - Creative, high-quality
+2. **gpt-4-turbo** - Fast, versatile
+3. **claude-sonnet-4.5** - Balanced creativity and cost
+
+```typescript
+{
+  model: 'claude-opus-4.5',
+  messages: [
+    {
+      role: 'system',
+      content: 'You are a creative content writer.'
+    },
+    {
+      role: 'user',
+      content: 'Write a blog post about AI trends...'
+    }
+  ],
+  temperature: 0.9  // Higher for creativity
+}
+```
+
+### Data Analysis
+
+**Recommended:**
+1. **claude-opus-4.5** - Deep analysis
+2. **gpt-4-turbo** - Fast insights
+3. **gemini-1.5-pro** - Large datasets
+
+```typescript
+{
+  model: 'claude-opus-4.5',
+  messages: [
+    {
+      role: 'system',
+      content: 'You are a data analyst expert.'
+    },
+    {
+      role: 'user',
+      content: 'Analyze this dataset and find trends...'
+    }
+  ],
+  temperature: 0.2  // Factual analysis
+}
+```
+
+### Simple Classification
+
+**Recommended:**
+1. **claude-haiku-4** - Fastest, cheapest
+2. **gpt-3.5-turbo** - Reliable, fast
+3. **gemini-1.5-flash** - Cost-effective
+
+```typescript
+{
+  model: 'claude-haiku-4',
+  messages: [
+    {
+      role: 'user',
+      content: 'Classify the sentiment: "I love this product!"'
+    }
+  ],
+  max_tokens: 50  // Short responses
+}
+```
+
+## Cost Optimization Strategies
+
+### 1. Model Selection Ladder
+
+Start with cheaper models, escalate as needed:
+
+```typescript
+// Tier 1: Try fastest/cheapest first
+try {
+  return await callModel('claude-haiku-4', prompt);
+} catch (error) {
+  // Tier 2: If insufficient, try mid-tier
+  try {
+    return await callModel('claude-sonnet-4.5', prompt);
+  } catch (error) {
+    // Tier 3: Use most capable as fallback
+    return await callModel('claude-opus-4.5', prompt);
+  }
+}
+```
+
+### 2. Task-Specific Routing
+
+Route different tasks to optimal models:
+
+```typescript
+function selectModel(taskType: string) {
+  switch (taskType) {
+    case 'classification':
+      return 'claude-haiku-4';      // Fast & cheap
+    case 'chat':
+      return 'claude-sonnet-4.5';   // Balanced
+    case 'analysis':
+      return 'claude-opus-4.5';     // Most capable
+    default:
+      return 'claude-sonnet-4.5';
+  }
+}
+```
+
+### 3. Prompt Caching
+
+Cache common prompts to save costs:
+
+```typescript
+const cache = new Map();
+
+async function getCachedResponse(prompt: string) {
+  const cacheKey = hashPrompt(prompt);
+
+  if (cache.has(cacheKey)) {
+    return cache.get(cacheKey);
+  }
+
+  const response = await callModel('claude-sonnet-4.5', prompt);
+  cache.set(cacheKey, response);
+
+  return response;
+}
+```
+
+### 4. Token Management
+
+Control token usage to manage costs:
+
+```typescript
+{
+  model: 'claude-sonnet-4.5',
+  messages: [/* ... */],
+  max_tokens: 500,  // Limit response length
+  temperature: 0.7
+}
+```
+
+## Multi-Provider Strategies
+
+### Load Balancing
+
+Distribute requests across providers for redundancy:
+
+```typescript
+// Configure multiple providers for the same model
+const providers = [
+  { name: 'Anthropic Primary', weight: 0.7 },
+  { name: 'Anthropic Backup', weight: 0.3 }
+];
+```
+
+### Fallback Chain
+
+Try primary provider, fallback to secondary:
+
+```typescript
+async function callWithFallback(prompt: string) {
+  try {
+    return await callModel('claude-sonnet-4.5', prompt, 'primary');
+  } catch (error) {
+    console.warn('Primary failed, trying backup...');
+    return await callModel('claude-sonnet-4.5', prompt, 'backup');
+  }
+}
+```
+
+### Custom Model Mappings
+
+Create custom model names for easy switching:
+
+```typescript
+// Map "my-chatbot" to current best model
+POST /api/admin/models
+{
+  custom_name: 'my-chatbot',
+  actual_model_name: 'claude-sonnet-4.5',
+  provider_id: 'anthropic-id'
+}
+
+// Use in your app
+fetch('https://api.bluesminds.com/v1/chat/completions', {
+  body: JSON.stringify({
+    model: 'my-chatbot',  // Easy to change backend
+    messages: [/* ... */]
+  })
+});
+```
+
+## Performance Considerations
+
+### Latency
+
+**Fastest to Slowest:**
+1. claude-haiku-4 (~0.5-1s)
+2. gpt-3.5-turbo (~0.5-1s)
+3. gemini-1.5-flash (~0.5-1s)
+4. gpt-4o (~1-2s)
+5. claude-sonnet-4.5 (~1-2s)
+6. gpt-4-turbo (~1-2s)
+7. gemini-1.5-pro (~1-3s)
+8. claude-opus-4.5 (~2-4s)
+
+### Throughput
+
+**Requests per minute (typical):**
+- claude-haiku-4: 1000+
+- gpt-3.5-turbo: 1000+
+- claude-sonnet-4.5: 500+
+- gpt-4-turbo: 500+
+- claude-opus-4.5: 100+
+
+### Context Windows
+
+**Maximum tokens:**
+- Claude 4.5 series: 200,000 tokens
+- Gemini 1.5: 1,000,000+ tokens
+- GPT-4 series: 128,000 tokens
+- GPT-3.5-turbo: 16,000 tokens
+
+## Migration Guide
+
+### From GPT-4 to Claude
+
+```typescript
+// Before (GPT-4)
+{
+  model: 'gpt-4',
+  messages: [/* ... */],
+  temperature: 0.7
+}
+
+// After (Claude 4.5)
+{
+  model: 'claude-sonnet-4.5',  // Similar capability
+  messages: [/* ... */],
+  temperature: 0.7  // Same parameters work
+}
+```
+
+### From Claude 3 to Claude 4.5
+
+```typescript
+// Before (Claude 3)
+{
+  model: 'claude-3-opus',
+  messages: [/* ... */]
+}
+
+// After (Claude 4.5)
+{
+  model: 'claude-opus-4.5',  // Latest version
+  messages: [/* ... */]
+  // All parameters are compatible
+}
+```
+
+## Best Practices
+
+### 1. Start Conservative
+
+Begin with mid-tier models:
+- **Development**: Use Haiku for fast iteration
+- **Staging**: Test with Sonnet
+- **Production**: Use Sonnet, upgrade to Opus if needed
+
+### 2. Monitor Performance
+
+Track metrics to optimize model selection:
+- Response quality
+- Latency
+- Cost per request
+- Error rates
+
+### 3. Implement Graceful Degradation
+
+Handle failures smoothly:
+
+```typescript
+const modelTiers = [
+  'claude-opus-4.5',    // Try best first
+  'claude-sonnet-4.5',  // Fallback to mid
+  'claude-haiku-4'      // Last resort
+];
+
+for (const model of modelTiers) {
+  try {
+    return await callModel(model, prompt);
+  } catch (error) {
+    console.warn(`${model} failed, trying next...`);
+  }
+}
+```
+
+### 4. Use Streaming for UX
+
+Enable streaming for better user experience:
+
+```typescript
+{
+  model: 'claude-sonnet-4.5',
+  messages: [/* ... */],
+  stream: true  // Show results as they arrive
+}
+```
+
+## Next Steps
+
+- Read the [Anthropic Guide](/docs/guides/anthropic) for Claude-specific tips
+- Explore the [API Reference](/docs/api/chat) for all parameters
+- Check [Pricing](/pricing) for current model costs
+- View [Analytics](/admin/analytics) to track your usage
