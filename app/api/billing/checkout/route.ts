@@ -97,8 +97,8 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         email: (profile as any).email,
         existingCustomerId: existingCreemCustomerId,
-        successUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing?success=true`,
-        cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing?canceled=true`,
+        successUrl: `${env.NEXT_PUBLIC_APP_URL}/dashboard/billing?success=true`,
+        cancelUrl: `${env.NEXT_PUBLIC_APP_URL}/dashboard/billing?canceled=true`,
       })
 
     // Backward-compatible: do not persist to `users.metadata` (column may not exist in production).
