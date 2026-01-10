@@ -1,0 +1,63 @@
+---
+title: Multi-provider load balancing
+description: Improve reliability by routing traffic across multiple providers and servers.
+---
+
+# Multi-provider load balancing
+
+BluesMinds can route requests across multiple upstream servers/providers to improve reliability and reduce tail latency.
+
+This page describes the operational concepts and common configurations. Exact UI fields may vary by deployment.
+
+## Concepts
+
+### Provider / server
+
+A provider (or server) is an upstream endpoint BluesMinds can send requests to (for example, a LiteLLM proxy or a direct provider API).
+
+### Priority
+
+Lower numbers are tried first. If the primary server is unhealthy or fails, BluesMinds can fall back to the next priority.
+
+### Weight
+
+Weights distribute traffic across servers at the same priority (simple load balancing).
+
+## Common configurations
+
+### Active / passive failover
+
+- **Primary**: priority `1`, weight `1.0`
+- **Backup**: priority `2`, weight `1.0`
+
+Use this when you want the backup to receive traffic only when the primary is unhealthy.
+
+### Active / active load balancing
+
+- **Server A**: priority `1`, weight `0.5`
+- **Server B**: priority `1`, weight `0.5`
+
+Use this when you want to spread traffic across two equivalent upstreams.
+
+### Regional routing (conceptual)
+
+If you run multiple gateways (one per region), route users to the nearest gateway at the edge (DNS / load balancer), then use provider load balancing within each region.
+
+## Troubleshooting
+
+### Traffic is not balancing as expected
+
+- Ensure servers share the same priority.
+- Verify weights are non-zero and sum to a meaningful distribution.
+- Check health status in `/admin/providers`.
+
+### Failover does not happen
+
+- Confirm the primary is marked unhealthy (health checks failing).
+- Verify a backup server exists with a higher priority number.
+- Check logs to see why requests are failing (timeouts vs auth vs validation).
+
+## Next steps
+
+- Add application-level fallbacks: [`model-fallback.mdx`](./common-tasks/model-fallback.mdx)
+- Configure a provider (Anthropic example): [`setup-anthropic.mdx`](./setup-anthropic.mdx)

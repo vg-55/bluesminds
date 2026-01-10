@@ -5,33 +5,31 @@ description: Learn how to authenticate your requests to the BluesMinds API
 
 # Authentication
 
-Learn how to authenticate your requests to the BluesMinds API.
+Learn how to authenticate your requests to the BluesMinds API using API keys.
 
-## API Keys
+## API keys
 
-BluesMinds uses API keys to authenticate requests. You can create and manage your API keys from the [dashboard](/dashboard/keys).
+BluesMinds uses API keys to authenticate requests. Create and manage keys in the [`/dashboard/keys`](/dashboard/keys) page.
 
-## Key Types
+### Send the key on every request
 
-### Test Keys
-
-**Prefix:** `bm_test_`
-
-Test keys have limited quotas and are meant for development and testing purposes only.
-
-### Live Keys
-
-**Prefix:** `bm_live_`
-
-Live keys are for production use and have full access to your account's quota and features.
-
-## Making Authenticated Requests
-
-Include your API key in the Authorization header:
+Include your API key in the `Authorization` header:
 
 ```bash
 Authorization: Bearer bm_live_abc123def456ghi789jkl
 ```
+
+If you are using the SDK, it will set this header automatically.
+
+## Key types
+
+### Test keys (`bm_test_`)
+
+Use test keys for development and CI. They typically have lower quotas and are not intended for production traffic.
+
+### Live keys (`bm_live_`)
+
+Use live keys for production traffic. Treat them as secrets.
 
 ## Using the SDK
 
@@ -46,17 +44,30 @@ const client = new BluesMinds({
 
 // All requests are automatically authenticated
 const response = await client.chat.completions.create({
-  model: 'gpt-4',
+  model: 'gpt-4o',
   messages: [{ role: 'user', content: 'Hello!' }]
 });
 ```
 
 <Callout type="warn">
-## Security Best Practices
+## Security best practices
 
 - Never commit API keys to version control
-- Store keys in environment variables
-- Rotate keys regularly
+- Store keys in environment variables or a secret manager
+- Rotate keys regularly (see [`rotate-api-keys.mdx`](/docs/guides/common-tasks/rotate-api-keys))
 - Use test keys for development
 - Delete unused keys immediately
 </Callout>
+
+## Troubleshooting
+
+### 401 Unauthorized
+
+- Confirm the header is `Authorization: Bearer <key>`.
+- Verify the key is active in `/dashboard/keys`.
+- Ensure you are not mixing environments (test key in prod, or vice versa).
+
+## Next steps
+
+- Make a request: [`quickstart.mdx`](/docs/quickstart)
+- Explore endpoints: [`api/index.mdx`](/docs/api)

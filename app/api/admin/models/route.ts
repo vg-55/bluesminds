@@ -121,6 +121,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Auto-create pricing entry for the custom model mapping
+    // Check if pricing already exists for this custom_name
+    const { data: existingPricing } = await supabaseAdmin
+      .from('model_pricing')
+      .select('model_name')
+      .eq('model_name', custom_name)
+      .maybeSingle();
+
+    if (!existingPricing) {
+      // Extract provider name from actual_model_name for pricing
+      const providerName = extractProviderFromModel(actual_model_name);
+
+      // Create pricing entry
+      const { error: pricingError } = await supabaseAdmin
+        .from('model_pricing')
+        .insert({
+          model_name: custom_name,
+          price_per_request: 0.005, // Default pricing
+          provider: providerName,
+          is_custom: true,
+          is_active: true,
+          notes: `Auto-created for custom model mapping: ${custom_name} → ${actual_model_name}`,
+        });
+
+      if (pricingError) {
+        console.warn('Failed to auto-create pricing for custom model:', pricingError);
+        // Don't fail the request - pricing can be added manually later
+      } else {
+        console.log(`Auto-created pricing for custom model: ${custom_name}`);
+      }
+    }
+
     return NextResponse.json({ data }, { status: 201 });
   } catch (error) {
     console.error('Error creating custom model:', error);
@@ -171,6 +203,44 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // If the model was deactivated, also deactivate its auto-created pricing
+    if (updates.is_active === false && data) {
+      const { data: pricing } = await supabaseAdmin
+        .from('model_pricing')
+        .select('model_name, notes, is_active')
+        .eq('model_name', (data as any).custom_name)
+        .maybeSingle();
+
+      // Only update if it was auto-created and is currently active
+      if (pricing && pricing.notes?.includes('Auto-created for custom model mapping') && pricing.is_active) {
+        await supabaseAdmin
+          .from('model_pricing')
+          .update({ is_active: false })
+          .eq('model_name', (data as any).custom_name);
+
+        console.log(`Auto-deactivated pricing for deactivated custom model: ${(data as any).custom_name}`);
+      }
+    }
+
+    // If the model was activated, also activate its auto-created pricing
+    if (updates.is_active === true && data) {
+      const { data: pricing } = await supabaseAdmin
+        .from('model_pricing')
+        .select('model_name, notes, is_active')
+        .eq('model_name', (data as any).custom_name)
+        .maybeSingle();
+
+      // Only update if it was auto-created and is currently inactive
+      if (pricing && pricing.notes?.includes('Auto-created for custom model mapping') && !pricing.is_active) {
+        await supabaseAdmin
+          .from('model_pricing')
+          .update({ is_active: true })
+          .eq('model_name', (data as any).custom_name);
+
+        console.log(`Auto-activated pricing for activated custom model: ${(data as any).custom_name}`);
+      }
+    }
+
     return NextResponse.json({ data });
   } catch (error) {
     console.error('Error updating custom model:', error);
@@ -206,6 +276,13 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // Get the custom model info before deleting
+    const { data: customModel } = await supabaseAdmin
+      .from('custom_models')
+      .select('custom_name')
+      .eq('id', id)
+      .single();
+
     const { error } = await supabaseAdmin
       .from('custom_models')
       .delete()
@@ -219,6 +296,25 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // Auto-delete associated pricing entry if it was auto-created
+    if (customModel?.custom_name) {
+      const { data: pricing } = await supabaseAdmin
+        .from('model_pricing')
+        .select('model_name, notes')
+        .eq('model_name', customModel.custom_name)
+        .maybeSingle();
+
+      // Only delete if it was auto-created (has the auto-created note)
+      if (pricing && pricing.notes?.includes('Auto-created for custom model mapping')) {
+        await supabaseAdmin
+          .from('model_pricing')
+          .delete()
+          .eq('model_name', customModel.custom_name);
+
+        console.log(`Auto-deleted pricing for removed custom model: ${customModel.custom_name}`);
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting custom model:', error);
@@ -227,4 +323,27 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Helper function to extract provider from model name
+function extractProviderFromModel(modelName: string): string {
+  const name = modelName.toLowerCase();
+
+  if (name.includes('gpt') || name.includes('openai')) {
+    return 'openai';
+  } else if (name.includes('claude') || name.includes('anthropic')) {
+    return 'anthropic';
+  } else if (name.includes('gemini') || name.includes('palm') || name.includes('google')) {
+    return 'google';
+  } else if (name.includes('llama')) {
+    return 'meta';
+  } else if (name.includes('mistral')) {
+    return 'mistral';
+  } else if (name.includes('deepseek')) {
+    return 'deepseek';
+  } else if (name.includes('cohere')) {
+    return 'cohere';
+  }
+
+  return 'custom';
 }

@@ -18,6 +18,11 @@ export const maxDuration = 30
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
   let serverId: string | undefined
+  const idempotencyKey =
+    request.headers.get('idempotency-key') ||
+    request.headers.get('x-idempotency-key') ||
+    request.headers.get('x-request-id') ||
+    crypto.randomUUID()
 
   try {
     // 1. AUTHENTICATION
@@ -78,6 +83,8 @@ export async function POST(request: NextRequest) {
     await logUsage({
       userId: authContext.user.id,
       apiKeyId: authContext.apiKey.id,
+      idempotencyKey,
+      requestId: idempotencyKey,
       serverId,
       endpoint: '/v1/embeddings',
       model,

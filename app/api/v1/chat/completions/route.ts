@@ -21,6 +21,11 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now()
   let serverId: string | undefined
   let requestId: string | undefined
+  const idempotencyKey =
+    request.headers.get('idempotency-key') ||
+    request.headers.get('x-idempotency-key') ||
+    request.headers.get('x-request-id') ||
+    crypto.randomUUID()
 
   try {
     // 1. AUTHENTICATION
@@ -97,7 +102,13 @@ export async function POST(request: NextRequest) {
       const { stream: passthrough, usagePromise } = parseStreamForUsage(proxyResponse.stream)
 
       // Use improved estimation as initial fallback
-      const tokenEstimate = estimateTokensImproved(requestData.messages, actualModel)
+      const tokenEstimate = estimateTokensImproved(
+        requestData.messages.map((m) => ({
+          role: m.role,
+          content: m.content ?? '',
+        })) as any,
+        actualModel
+      )
 
       // Log usage async - will update with actual tokens when stream completes
       logUsageAsyncWithStreamParsing(
@@ -110,7 +121,8 @@ export async function POST(request: NextRequest) {
         usagePromise,
         responseTimeMs,
         proxyResponse.status,
-        isError
+        isError,
+        idempotencyKey
       )
 
       // Return streaming response
@@ -136,6 +148,8 @@ export async function POST(request: NextRequest) {
     requestId = await logUsage({
       userId: authContext.user.id,
       apiKeyId: authContext.apiKey.id,
+      idempotencyKey,
+      requestId: idempotencyKey,
       serverId,
       endpoint: '/v1/chat/completions',
       model: requestedModel, // Log the model name the user requested
@@ -187,7 +201,8 @@ async function logUsageAsyncWithStreamParsing(
   usagePromise: Promise<{ promptTokens: number; completionTokens: number; totalTokens: number; source: 'actual' } | null>,
   responseTimeMs: number,
   statusCode: number,
-  isError: boolean
+  isError: boolean,
+  idempotencyKey: string
 ) {
   try {
     // Wait for stream parsing to complete (with timeout)
@@ -213,6 +228,8 @@ async function logUsageAsyncWithStreamParsing(
     await logUsage({
       userId: authContext.user.id,
       apiKeyId: authContext.apiKey.id,
+      idempotencyKey,
+      requestId: idempotencyKey,
       serverId,
       endpoint: '/v1/chat/completions',
       model: requestedModel,

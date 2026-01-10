@@ -7,6 +7,14 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { applySecurityHeaders, applyCorsHeaders } from '@/lib/config/security'
 
 export async function middleware(request: NextRequest) {
+  // `/docs` should be fast and public: avoid Supabase auth/session refresh entirely.
+  // (Also prevents extra middleware latency and any auth-related failures impacting docs.)
+  if (request.nextUrl.pathname.startsWith('/docs')) {
+    const res = NextResponse.next({ request })
+    applySecurityHeaders(res.headers)
+    return res
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -72,8 +80,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder
-     * - api routes that handle their own auth
+     * - docs (public; avoid Supabase auth in middleware)
      */
-    '/((?!_next/static|_next/image|favicon.ico|icon.png|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|icon.png|docs(?:/.*)?$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

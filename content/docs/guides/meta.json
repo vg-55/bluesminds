@@ -1,8 +1,13 @@
 {
   "title": "Guides",
   "pages": [
+    "index",
     "setup-anthropic",
     "anthropic",
-    "models"
+    "models",
+    "multi-provider",
+    "common-tasks/rotate-api-keys",
+    "common-tasks/streaming-chat",
+    "common-tasks/model-fallback"
   ]
 }

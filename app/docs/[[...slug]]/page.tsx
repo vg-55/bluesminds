@@ -1,3 +1,4 @@
+import type React from 'react';
 import { source } from '@/lib/source';
 import {
   DocsPage,
@@ -9,6 +10,8 @@ import { notFound } from 'next/navigation';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
 import { Callout } from '@/components/mdx/callout';
 import { Card, Cards } from '@/components/mdx/cards';
+
+export const revalidate = 3600; // safer than a 1y CDN cache; allows updates to docs without redeploy
 
 export default async function Page({
   params,
@@ -22,12 +25,22 @@ export default async function Page({
     notFound();
   }
 
-  const MDX = page.data.body;
+  // `source` is built from `lib/source.ts` and includes `body` at runtime, but the
+  // generated `PageData` type may not include it. Cast narrowly to keep TS happy.
+  const data = page.data as unknown as {
+    title: string
+    description?: string
+    body: React.ComponentType<{ components?: Record<string, unknown> }>
+    toc?: any
+    full?: boolean
+  }
+
+  const MDX = data.body
 
   return (
-    <DocsPage toc={page.data.toc} full={page.data.full}>
-      <DocsTitle>{page.data.title}</DocsTitle>
-      <DocsDescription>{page.data.description}</DocsDescription>
+    <DocsPage toc={data.toc} full={data.full}>
+      <DocsTitle>{data.title}</DocsTitle>
+      <DocsDescription>{data.description}</DocsDescription>
       <DocsBody>
         <MDX
           components={{

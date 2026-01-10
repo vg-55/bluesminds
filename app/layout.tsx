@@ -1,7 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
 
-import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { Suspense } from "react"
 import { Providers } from "./providers"
@@ -43,9 +42,9 @@ const geistMono = V0_Font_Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "v0 App",
-  description: "Created with v0",
-  generator: "v0.app",
+  title: "Blueminds API",
+  description: "AI Gateway API Platform",
+  generator: "blueminds",
   icons: {
     icon: "/icon.png",
     apple: "/icon.png",
@@ -57,6 +56,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // Load Vercel Analytics only when available (prevents 404/MIME errors in non-Vercel envs).
+  const Analytics = process.env.VERCEL ? require("@vercel/analytics/next").Analytics : null
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`font-sans ${openSans.variable} ${rubik.variable} ${instrumentSerif.variable} ${geistMono.variable}`}>
@@ -64,7 +66,7 @@ export default function RootLayout({
           <RootProvider>
             <Suspense fallback={null}>
               {children}
-              <Analytics />
+              {Analytics ? <Analytics /> : null}
             </Suspense>
           </RootProvider>
         </Providers>

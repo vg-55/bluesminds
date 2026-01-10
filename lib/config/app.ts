@@ -113,34 +113,38 @@ export function calculateCostHybrid(
 }
 
 // ============================================================================
-// TOKEN-BASED PRICING (Legacy - kept for analytics only)
+// TOKEN-BASED PRICING (Real production costs from providers)
 // ============================================================================
 
-// Model pricing (cost per 1K tokens) - Used for analytics/logging only
+// Model pricing (cost per 1K tokens) - Real production costs
+// Source: Provider pricing pages (January 2026)
 export const modelPricing: Record<string, { input: number; output: number }> = {
-  // OpenAI
+  // OpenAI - Real costs per 1K tokens
   'gpt-4': { input: 0.03, output: 0.06 },
   'gpt-4-turbo': { input: 0.01, output: 0.03 },
   'gpt-4o': { input: 0.005, output: 0.015 },
   'gpt-3.5-turbo': { input: 0.0005, output: 0.0015 },
 
-  // Anthropic Claude 3 series
+  // Anthropic Claude 3 series - Real costs per 1K tokens
   'claude-3-opus-20240229': { input: 0.015, output: 0.075 },
   'claude-3-sonnet-20240229': { input: 0.003, output: 0.015 },
   'claude-3-haiku-20240307': { input: 0.00025, output: 0.00125 },
   'claude-3-5-sonnet-20241022': { input: 0.003, output: 0.015 },
 
-  // Anthropic Claude 4 series (newer models)
+  // Anthropic Claude 4 series (newer models) - Real costs per 1K tokens
   'claude-opus-4': { input: 0.015, output: 0.075 },
   'claude-opus-4.5': { input: 0.015, output: 0.075 },
   'claude-opus-4-5-20251031': { input: 0.015, output: 0.075 },      // Latest Opus 4.5 with date
+  'claude-opus-4-5-20251101': { input: 0.015, output: 0.075 },      // Opus 4.5 variant
   'claude-sonnet-4': { input: 0.003, output: 0.015 },
   'claude-sonnet-4.5': { input: 0.003, output: 0.015 },
   'claude-sonnet-4-5-20250929': { input: 0.003, output: 0.015 },    // Latest Sonnet 4.5 with date
+  'claude-sonnet-4-5-20251001': { input: 0.003, output: 0.015 },    // Sonnet 4.5 variant
   'claude-haiku-4': { input: 0.00025, output: 0.00125 },
   'claude-haiku-4-0-20250101': { input: 0.00025, output: 0.00125 }, // Latest Haiku 4.0 with date
+  'claude-haiku-4-5-20251001': { input: 0.00025, output: 0.00125 }, // Haiku 4.5 variant
 
-  // Google
+  // Google - Real costs per 1K tokens
   'gemini-pro': { input: 0.00025, output: 0.0005 },
   'gemini-1.5-pro': { input: 0.00125, output: 0.005 },
   'gemini-1.5-flash': { input: 0.000125, output: 0.0005 },

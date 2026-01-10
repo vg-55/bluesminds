@@ -1,0 +1,43 @@
+---
+title: API Reference
+description: Endpoints, request/response formats, and examples for the BluesMinds API.
+---
+
+# API Reference
+
+BluesMinds exposes an OpenAI-compatible API surface for common workflows (chat completions, embeddings, and model discovery), plus admin endpoints for managing providers, keys, and mappings.
+
+## Base URL
+
+All examples below use the hosted API:
+
+```bash
+https://api.bluesminds.com
+```
+
+If you self-host, replace the base URL with your gateway URL.
+
+## Authentication
+
+All API requests require a bearer token:
+
+```bash
+Authorization: Bearer bm_live_your_api_key
+```
+
+For details and key management, see [`authentication.mdx`](../authentication.mdx).
+
+## Endpoints
+
+- [`chat.mdx`](./chat.mdx): `POST /v1/chat/completions`
+- [`models.mdx`](./models.mdx): `GET /v1/models`
+
+## Common response shape
+
+Most endpoints return JSON. Errors are returned with a non-2xx status code and a JSON body describing the error.
+
+## Next steps
+
+- Start with [`chat.mdx`](./chat.mdx)
+- Discover available models via [`models.mdx`](./models.mdx)
+- For practical workflows, see the guides in [`guides/index.mdx`](../guides/index.mdx)

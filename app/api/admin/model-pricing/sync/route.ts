@@ -31,53 +31,27 @@ export async function GET(request: NextRequest) {
       await ensureUserProfile(supabaseAdmin, user.id)
     }
 
-    // 1. Fetch all active LiteLLM servers and their supported models
-    const { data: servers } = await supabase
-      .from('litellm_servers')
-      .select('id, name, supported_models, is_active')
-      .eq('is_active', true)
-
-    // 2. Fetch all custom model mappings
+    // 1. Fetch all custom model mappings (only active custom_name entries)
     const { data: customModels } = await supabase
       .from('custom_models')
       .select('custom_name, actual_model_name, provider_id, is_active')
       .eq('is_active', true)
 
-    // 3. Fetch all existing model pricing
+    // 2. Fetch all existing model pricing
     const { data: existingPricing } = await supabase
       .from('model_pricing')
-      .select('model_name, price_per_request, is_active')
+      .select('model_name, price_per_request, is_active, is_custom')
 
     // Create a map of existing pricing for quick lookup
     const pricingMap = new Map(
       existingPricing?.map((p) => [p.model_name, p]) || []
     )
 
-    // 4. Collect all unique models
+    // 3. Collect all unique models (only mapped/custom models)
     const allModels = new Map<string, AvailableModel>()
 
-    // Add models from servers
-    servers?.forEach((server) => {
-      const models = server.supported_models as string[] | null
-      if (Array.isArray(models)) {
-        models.forEach((modelName) => {
-          if (!allModels.has(modelName)) {
-            const pricing = pricingMap.get(modelName)
-            allModels.set(modelName, {
-              model_name: modelName,
-              source: 'server',
-              provider: extractProviderFromModel(modelName),
-              has_pricing: !!pricing,
-              current_pricing: pricing?.price_per_request,
-            })
-          }
-        })
-      }
-    })
-
-    // Add custom model mappings (both custom_name and actual_model_name)
+    // Add custom model mappings (only custom_name, not actual_model_name)
     customModels?.forEach((customModel) => {
-      // Add custom name
       if (!allModels.has(customModel.custom_name)) {
         const pricing = pricingMap.get(customModel.custom_name)
         allModels.set(customModel.custom_name, {
@@ -88,19 +62,18 @@ export async function GET(request: NextRequest) {
           current_pricing: pricing?.price_per_request,
         })
       }
+    })
 
-      // Add actual model name if different
-      if (customModel.actual_model_name && customModel.actual_model_name !== customModel.custom_name) {
-        if (!allModels.has(customModel.actual_model_name)) {
-          const pricing = pricingMap.get(customModel.actual_model_name)
-          allModels.set(customModel.actual_model_name, {
-            model_name: customModel.actual_model_name,
-            source: 'custom_mapping',
-            provider: extractProviderFromModel(customModel.actual_model_name),
-            has_pricing: !!pricing,
-            current_pricing: pricing?.price_per_request,
-          })
-        }
+    // Add models marked as custom in model_pricing
+    existingPricing?.forEach((pricing) => {
+      if (pricing.is_custom && !allModels.has(pricing.model_name)) {
+        allModels.set(pricing.model_name, {
+          model_name: pricing.model_name,
+          source: 'custom_mapping',
+          provider: extractProviderFromModel(pricing.model_name),
+          has_pricing: true,
+          current_pricing: pricing.price_per_request,
+        })
       }
     })
 

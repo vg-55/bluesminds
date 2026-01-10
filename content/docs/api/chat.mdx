@@ -5,62 +5,61 @@ description: Generate chat completions using any supported AI model
 
 # Chat *Completions*
 
-Generate chat completions using any supported AI model.
+Generate chat completions using any supported AI model via an OpenAI-compatible endpoint.
 
 ## Endpoint
 
-```
+```bash
 POST https://api.bluesminds.com/v1/chat/completions
 ```
 
-## Request Body
+## Prerequisites
+
+- A valid API key (see [`authentication.mdx`](../authentication.mdx))
+- A model id available on your gateway (discover via [`models.mdx`](./models.mdx))
+
+## Request body
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `model` | string | Yes | Model identifier (e.g., "gpt-4") |
-| `messages` | array | Yes | Array of message objects |
-| `temperature` | number | No | Sampling temperature (0-2) |
+| `model` | string | Yes | Model identifier (for example, `gpt-4o` or `claude-sonnet-4.5`) |
+| `messages` | array | Yes | Array of message objects (`role`, `content`) |
+| `temperature` | number | No | Sampling temperature (typically `0`–`2`) |
 | `max_tokens` | number | No | Maximum tokens to generate |
-| `stream` | boolean | No | Enable streaming responses |
+| `stream` | boolean | No | Stream responses as SSE |
 
-## Example Request
+## Example request
 
 ```typescript
 const response = await fetch('https://api.bluesminds.com/v1/chat/completions', {
   method: 'POST',
   headers: {
-    'Authorization': 'Bearer bm_live_your_api_key',
-    'Content-Type': 'application/json'
+    Authorization: 'Bearer bm_live_your_api_key',
+    'Content-Type': 'application/json',
   },
   body: JSON.stringify({
-    model: 'gpt-4',
+    model: 'gpt-4o',
     messages: [
-      {
-        role: 'system',
-        content: 'You are a helpful assistant.'
-      },
-      {
-        role: 'user',
-        content: 'What is the capital of France?'
-      }
+      { role: 'system', content: 'You are a helpful assistant.' },
+      { role: 'user', content: 'What is the capital of France?' },
     ],
     temperature: 0.7,
-    max_tokens: 500
-  })
+    max_tokens: 500,
+  }),
 });
 
 const data = await response.json();
 console.log(data.choices[0].message.content);
 ```
 
-## Example Response
+## Example response
 
 ```json
 {
   "id": "chatcmpl-abc123",
   "object": "chat.completion",
   "created": 1677652288,
-  "model": "gpt-4",
+  "model": "gpt-4o",
   "choices": [
     {
       "index": 0,
@@ -79,29 +78,31 @@ console.log(data.choices[0].message.content);
 }
 ```
 
-## Supported Models
+## Supported models
 
-### OpenAI
-- gpt-4
-- gpt-4-turbo
-- gpt-3.5-turbo
-
-### Anthropic
-- claude-opus-4.5 (Latest, most capable)
-- claude-sonnet-4.5 (Latest, balanced)
-- claude-haiku-4 (Latest, fastest)
-- claude-3-opus
-- claude-3-sonnet
-- claude-3-haiku
-
-### Google
-- gemini-pro
-- gemini-pro-vision
-
-### Cohere
-- command
-- command-light
+Model availability depends on how your gateway is configured. Use [`GET /v1/models`](./models.mdx) to retrieve the current list of supported model ids.
 
 <Callout>
-**Note:** Model availability and features may vary by provider. Check the [models endpoint](/docs/api/models) for the latest supported models.
+**Note:** If a model id is not returned by `/v1/models`, requests using that `model` value will fail with a “model not found” error.
 </Callout>
+
+## Troubleshooting
+
+### 401 Unauthorized
+
+- Ensure you are sending `Authorization: Bearer <key>`.
+- Verify the key is active and belongs to the correct environment (test vs live).
+
+### Model not found
+
+- Call [`/v1/models`](./models.mdx) and use an `id` from the response.
+- If self-hosting, confirm providers and model mappings exist in the admin UI.
+
+### Streaming issues
+
+If `stream: true` does not stream in your environment, see [`streaming-chat.mdx`](../guides/common-tasks/streaming-chat.mdx).
+
+## Next steps
+
+- Discover models: [`models.mdx`](./models.mdx)
+- Practical workflows: [`guides/index.mdx`](../guides/index.mdx)

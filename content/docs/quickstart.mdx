@@ -3,11 +3,21 @@ title: Quick Start
 description: Get started with BluesMinds in under 5 minutes
 ---
 
-# Quick *Start*
+# Quick Start
 
 Get started with BluesMinds in under 5 minutes.
 
-## Installation
+## Prerequisites
+
+- Node.js 18+ (or any runtime that supports `fetch`)
+- A BluesMinds API key (create one in `/dashboard/keys`)
+- Set `BLUESMINDS_API_KEY` in your environment
+
+```bash
+export BLUESMINDS_API_KEY=bm_live_your_api_key
+```
+
+## Install the SDK
 
 Install the BluesMinds SDK using your preferred package manager:
 
@@ -19,9 +29,9 @@ yarn add @bluesminds/sdk
 pnpm add @bluesminds/sdk
 ```
 
-## Initialize the Client
+## Initialize the client
 
-Create a new client instance with your API key:
+Create a client instance with your API key:
 
 ```typescript
 import { BluesMinds } from '@bluesminds/sdk';
@@ -31,7 +41,7 @@ const client = new BluesMinds({
 });
 ```
 
-## Make Your First Request
+## Make your first request
 
 Send a chat completion request to any supported model:
 
@@ -46,9 +56,9 @@ const response = await client.chat.completions.create({
 console.log(response.choices[0].message.content);
 ```
 
-## Use Different Providers
+## Use different providers
 
-Switch between providers seamlessly by changing the model name:
+Switch providers by changing the model name. To see what is available on your gateway, call the [`/v1/models` endpoint](/docs/api/models).
 
 ```typescript
 // OpenAI
@@ -70,9 +80,9 @@ await client.chat.completions.create({
 });
 ```
 
-## Error Handling
+## Error handling
 
-Handle errors gracefully with try-catch blocks:
+Handle errors with a `try/catch` and branch on status codes when possible:
 
 ```typescript
 try {
@@ -92,6 +102,20 @@ try {
 }
 ```
 
-## Next Steps
+## Troubleshooting
 
-**Next Steps:** Learn about [authentication](/docs/authentication), explore the [API reference](/docs/api/chat), or check out our [routing strategies guide](/docs/guides/routing).
+### 401 / authentication errors
+
+- Confirm `BLUESMINDS_API_KEY` is set in the environment where your code runs.
+- Ensure the header is `Authorization: Bearer <key>` (the SDK does this automatically).
+
+### Model not found
+
+- Call [`/v1/models`](/docs/api/models) and use an `id` from the response.
+- If self-hosting, ensure providers and model mappings are configured in the admin UI.
+
+## Next steps
+
+- Read [`authentication.mdx`](/docs/authentication) for key types and security practices
+- Explore the API reference: [`api/index.mdx`](/docs/api)
+- Learn practical workflows in [`guides/index.mdx`](/docs/guides)

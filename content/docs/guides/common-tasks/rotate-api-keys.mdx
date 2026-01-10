@@ -1,0 +1,52 @@
+---
+title: Rotate API keys
+description: Safely rotate BluesMinds API keys without downtime.
+---
+
+# Rotate API keys
+
+Rotate keys regularly to reduce blast radius and comply with security policies.
+
+## Prerequisites
+
+- Access to the BluesMinds dashboard
+- Ability to update your application secrets (CI/CD, secret manager, or environment variables)
+
+## Recommended rotation flow (no downtime)
+
+1. **Create a new key**
+   - Create a new key in the dashboard: `/dashboard/keys`
+   - Prefer a dedicated key per environment (dev/staging/prod).
+
+2. **Deploy the new key alongside the old key**
+   - Update your secret store to include the new key.
+   - Deploy your app so it starts using the new key for new requests.
+
+3. **Verify traffic**
+   - Confirm requests succeed and usage appears in logs: `/dashboard/logs`.
+
+4. **Revoke the old key**
+   - Delete or disable the old key in the dashboard.
+
+## Example: environment variable update
+
+```bash
+# old
+BLUESMINDS_API_KEY=bm_live_old
+
+# new
+BLUESMINDS_API_KEY=bm_live_new
+```
+
+## Troubleshooting
+
+### 401 Unauthorized after rotation
+
+- Ensure the deployed environment is using the new key (not a cached secret).
+- Confirm the header is `Authorization: Bearer <key>`.
+- If you revoked the old key too early, re-enable it temporarily and repeat the flow.
+
+## Next steps
+
+- Review [`authentication.mdx`](../../authentication.mdx) for key types and security practices
+- Add a rotation cadence (e.g., every 90 days) and automate via your secret manager

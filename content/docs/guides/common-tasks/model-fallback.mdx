@@ -1,0 +1,83 @@
+---
+title: Add a model fallback chain
+description: Improve reliability by retrying with alternate models when a provider fails.
+---
+
+# Add a model fallback chain
+
+A fallback chain helps you keep serving requests when a model/provider is overloaded or temporarily unavailable.
+
+## When to use this
+
+- You see intermittent 5xx errors or provider overload errors.
+- You want graceful degradation (quality downshift) instead of hard failures.
+
+## Prerequisites
+
+- At least two models available on your gateway (verify via [`api/models.mdx`](../../api/models.mdx))
+- Your application can retry requests safely (idempotency considerations apply)
+
+## Example: fallback by model name
+
+```ts
+const candidates = [
+  'claude-sonnet-4.5', // primary
+  'gpt-4o',            // fallback
+  'claude-haiku-4',    // last resort (fast/cheap)
+];
+
+async function chatWithFallback(body: any) {
+  let lastError: unknown;
+
+  for (const model of candidates) {
+    try {
+      const res = await fetch('https://api.bluesminds.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.BLUESMINDS_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ...body, model }),
+      });
+
+      if (!res.ok) {
+        // Retry on transient errors; fail fast on auth/validation.
+        if ([401, 403, 400].includes(res.status)) {
+          throw new Error(`Non-retryable error: ${res.status}`);
+        }
+        throw new Error(`Retryable error: ${res.status}`);
+      }
+
+      return await res.json();
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError ?? new Error('All fallbacks failed');
+}
+```
+
+## Tips
+
+- Keep prompts compatible across models (avoid provider-specific features unless you gate them).
+- Prefer a “nearby” fallback (similar capability) before dropping to a cheaper model.
+- Log which model served the request for debugging and cost tracking.
+
+## Troubleshooting
+
+### All fallbacks fail with 401/403
+
+- Your key is invalid or missing. See [`authentication.mdx`](../../authentication.mdx).
+
+### Fallback succeeds but output quality changes
+
+- This is expected when switching to a smaller model. Consider:
+  - lowering `temperature`
+  - increasing `max_tokens`
+  - using a higher-tier fallback first
+
+## Next steps
+
+- Use streaming for better UX: [`common-tasks/streaming-chat.mdx`](./streaming-chat.mdx)
+- Review request parameters: [`api/chat.mdx`](../../api/chat.mdx)

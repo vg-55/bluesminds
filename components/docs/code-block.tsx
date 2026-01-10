@@ -4,11 +4,24 @@
 
 'use client'
 
-import { useState } from 'react'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import type React from 'react'
+import { useEffect, useState } from 'react'
 import { Copy, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+type SyntaxHighlighterComponent = React.ComponentType<{
+  language?: string
+  style?: unknown
+  showLineNumbers?: boolean
+  customStyle?: React.CSSProperties
+  codeTagProps?: { style?: React.CSSProperties }
+  children: string
+}>
+
+interface HighlighterState {
+  SyntaxHighlighter: SyntaxHighlighterComponent | null
+  style: unknown | null
+}
 
 interface CodeBlockProps {
   code: string
@@ -24,12 +37,42 @@ export function CodeBlock({
   showLineNumbers = false,
 }: CodeBlockProps) {
   const [copied, setCopied] = useState(false)
+  const [highlighter, setHighlighter] = useState<HighlighterState>({
+    SyntaxHighlighter: null,
+    style: null,
+  })
+
+  useEffect(() => {
+    let cancelled = false
+
+    // Dynamically import the heavy syntax highlighter only when a code block is actually rendered.
+    // This keeps `/docs` initial JS smaller while preserving identical highlighting behavior.
+    ;(async () => {
+      const [{ Prism: SyntaxHighlighter }, { vscDarkPlus }] = await Promise.all([
+        import('react-syntax-highlighter'),
+        import('react-syntax-highlighter/dist/esm/styles/prism'),
+      ])
+
+      if (!cancelled) {
+        setHighlighter({
+          SyntaxHighlighter: SyntaxHighlighter as unknown as SyntaxHighlighterComponent,
+          style: vscDarkPlus,
+        })
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(code)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  const lang = language === 'curl' ? 'bash' : language
 
   return (
     <div className="rounded-xl border border-foreground/10 bg-foreground/[0.02] backdrop-blur-xl overflow-hidden">
@@ -68,24 +111,33 @@ export function CodeBlock({
 
       {/* Code Content */}
       <div className="overflow-x-auto">
-        <SyntaxHighlighter
-          language={language === 'curl' ? 'bash' : language}
-          style={vscDarkPlus}
-          showLineNumbers={showLineNumbers}
-          customStyle={{
-            margin: 0,
-            padding: '1rem',
-            background: 'transparent',
-            fontSize: '0.875rem',
-          }}
-          codeTagProps={{
-            style: {
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-            },
-          }}
-        >
-          {code}
-        </SyntaxHighlighter>
+        {highlighter.SyntaxHighlighter ? (
+          <highlighter.SyntaxHighlighter
+            language={lang}
+            style={highlighter.style ?? undefined}
+            showLineNumbers={showLineNumbers}
+            customStyle={{
+              margin: 0,
+              padding: '1rem',
+              background: 'transparent',
+              fontSize: '0.875rem',
+            }}
+            codeTagProps={{
+              style: {
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+              },
+            }}
+          >
+            {code}
+          </highlighter.SyntaxHighlighter>
+        ) : (
+          // Non-blocking fallback: render plain code immediately, then enhance once highlighter loads.
+          <pre className="m-0 p-4 text-sm overflow-x-auto">
+            <code style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }}>
+              {code}
+            </code>
+          </pre>
+        )}
       </div>
     </div>
   )

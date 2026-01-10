@@ -22,12 +22,9 @@ import {
   Edit,
   Save,
   X,
-  Plus,
   Trash2,
   RefreshCw,
   AlertCircle,
-  Download,
-  CheckCircle,
 } from 'lucide-react'
 
 interface ModelPricing {
@@ -50,43 +47,118 @@ interface EditingModel extends Partial<ModelPricing> {
 
 interface AvailableModel {
   model_name: string
-  source: 'server' | 'custom_mapping'
-  provider?: string
-  has_pricing: boolean
-  current_pricing?: number
-}
-
-interface SyncData {
-  total_models: number
-  with_pricing: number
-  missing_pricing: number
-  models: AvailableModel[]
-  missing_models: AvailableModel[]
+  display_name: string
+  provider: string | null
+  is_custom: boolean
 }
 
 export default function ModelPricingPage() {
   const [models, setModels] = useState<ModelPricing[]>([])
-  const [syncData, setSyncData] = useState<SyncData | null>(null)
-  const [showMissingModels, setShowMissingModels] = useState(false)
-  const [syncing, setSyncing] = useState(false)
-  const [selectedMissingModels, setSelectedMissingModels] = useState<Set<string>>(new Set())
-  const [defaultPrice, setDefaultPrice] = useState('0.005')
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingData, setEditingData] = useState<EditingModel>({})
-  const [showNewForm, setShowNewForm] = useState(false)
   const [filter, setFilter] = useState<{
     provider?: string
     isActive?: string
     isCustom?: string
   }>({})
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
-    null
-  )
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  // Mapped models (Admin → Models) for selection + search
+  const [availableModels, setAvailableModels] = useState<AvailableModel[]>([])
+  const [modelSearch, setModelSearch] = useState('')
+  const [selectedModelName, setSelectedModelName] = useState<string>('')
+  const [selectionLoading, setSelectionLoading] = useState(true)
+  const [selectionSaving, setSelectionSaving] = useState(false)
 
   useEffect(() => {
     loadModels()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter])
+
+  useEffect(() => {
+    loadSelectionAndAvailableModels()
+  }, [])
+
+  const loadSelectionAndAvailableModels = async () => {
+    setSelectionLoading(true)
+    try {
+      const res = await fetch('/api/admin/model-pricing?include_settings=true')
+      const result = await res.json()
+
+      if (!result?.success) {
+        showMessage('error', 'Failed to load mapped models list')
+        setAvailableModels([])
+        setSelectedModelName('')
+        return
+      }
+
+      const modelsList: AvailableModel[] = Array.isArray(result?.settings?.available_models)
+        ? result.settings.available_models
+        : []
+
+      setAvailableModels(modelsList)
+
+      const serverSelected =
+        typeof result?.settings?.selected_model_name === 'string'
+          ? result.settings.selected_model_name
+          : ''
+
+      const exists = serverSelected && modelsList.some((m) => m.model_name === serverSelected)
+      if (exists) {
+        setSelectedModelName(serverSelected)
+      } else if (modelsList.length > 0) {
+        setSelectedModelName(modelsList[0].model_name)
+      } else {
+        setSelectedModelName('')
+      }
+    } catch (error) {
+      console.error('Selection load error:', error)
+      showMessage('error', 'Failed to load mapped models list')
+      setAvailableModels([])
+      setSelectedModelName('')
+    } finally {
+      setSelectionLoading(false)
+    }
+  }
+
+  const saveSelectedModel = async () => {
+    const trimmed = selectedModelName.trim()
+    if (!trimmed) {
+      showMessage('error', 'Please select a model')
+      return
+    }
+    const isValid = availableModels.some((m) => m.model_name === trimmed)
+    if (!isValid) {
+      showMessage('error', 'Selected model is not valid')
+      return
+    }
+
+    setSelectionSaving(true)
+    try {
+      const res = await fetch('/api/admin/model-pricing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'set_selected_model',
+          selected_model_name: trimmed,
+        }),
+      })
+      const result = await res.json()
+      if (result?.success) {
+        showMessage('success', 'Selected model saved')
+        // Re-fetch to ensure refresh persistence and server truth
+        await loadSelectionAndAvailableModels()
+      } else {
+        showMessage('error', result?.error?.message || result?.message || 'Failed to save selection')
+      }
+    } catch (error) {
+      console.error('Selection save error:', error)
+      showMessage('error', 'Failed to save selection')
+    } finally {
+      setSelectionSaving(false)
+    }
+  }
 
   const loadModels = async () => {
     setLoading(true)
@@ -117,87 +189,9 @@ export default function ModelPricingPage() {
     setTimeout(() => setMessage(null), 5000)
   }
 
-  const handleSyncModels = async () => {
-    setSyncing(true)
-    try {
-      const res = await fetch('/api/admin/model-pricing/sync')
-      const result = await res.json()
-
-      if (result.success) {
-        setSyncData(result.data)
-        setShowMissingModels(true)
-
-        if (result.data.missing_pricing > 0) {
-          showMessage('success', `Found ${result.data.missing_pricing} models without pricing`)
-        } else {
-          showMessage('success', 'All models have pricing configured!')
-        }
-      } else {
-        showMessage('error', 'Failed to sync models')
-      }
-    } catch (error) {
-      console.error('Sync error:', error)
-      showMessage('error', 'Failed to sync models')
-    } finally {
-      setSyncing(false)
-    }
-  }
-
-  const handleToggleMissingModel = (modelName: string) => {
-    const newSelected = new Set(selectedMissingModels)
-    if (newSelected.has(modelName)) {
-      newSelected.delete(modelName)
-    } else {
-      newSelected.add(modelName)
-    }
-    setSelectedMissingModels(newSelected)
-  }
-
-  const handleSelectAllMissing = () => {
-    if (selectedMissingModels.size === syncData?.missing_models.length) {
-      setSelectedMissingModels(new Set())
-    } else {
-      setSelectedMissingModels(
-        new Set(syncData?.missing_models.map((m) => m.model_name) || [])
-      )
-    }
-  }
-
-  const handleBulkImport = async () => {
-    if (selectedMissingModels.size === 0) {
-      showMessage('error', 'Please select at least one model to import')
-      return
-    }
-
-    try {
-      const modelsToImport = syncData?.missing_models.filter((m) =>
-        selectedMissingModels.has(m.model_name)
-      )
-
-      const res = await fetch('/api/admin/model-pricing/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          models: modelsToImport,
-          default_price: parseFloat(defaultPrice),
-        }),
-      })
-
-      const result = await res.json()
-      if (result.success) {
-        showMessage('success', `Successfully imported ${result.data.added} models`)
-        setShowMissingModels(false)
-        setSelectedMissingModels(new Set())
-        loadModels()
-        handleSyncModels() // Refresh sync data
-      } else {
-        showMessage('error', result.message || 'Failed to import models')
-      }
-    } catch (error) {
-      console.error('Import error:', error)
-      showMessage('error', 'Failed to import models')
-    }
-  }
+  // Sync/import is intentionally removed here: pricing should be managed only for mapped models
+  // (Admin → Models). If a mapped model is missing pricing, it will appear in the table as "No pricing"
+  // and can be created via the editor.
 
   const handleEdit = (model: ModelPricing) => {
     setEditingId(model.id)
@@ -207,43 +201,25 @@ export default function ModelPricingPage() {
   const handleCancelEdit = () => {
     setEditingId(null)
     setEditingData({})
-    setShowNewForm(false)
   }
 
   const handleSave = async () => {
     try {
-      if (showNewForm) {
-        // Create new model pricing
-        const res = await fetch('/api/admin/model-pricing', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(editingData),
-        })
+      const isCreate = !editingId
 
-        const result = await res.json()
-        if (result.success) {
-          showMessage('success', 'Model pricing created successfully')
-          loadModels()
-          handleCancelEdit()
-        } else {
-          showMessage('error', result.message || 'Failed to create model pricing')
-        }
+      const res = await fetch('/api/admin/model-pricing', {
+        method: isCreate ? 'POST' : 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(isCreate ? editingData : { id: editingId, ...editingData }),
+      })
+
+      const result = await res.json()
+      if (result.success) {
+        showMessage('success', isCreate ? 'Model pricing created successfully' : 'Model pricing updated successfully')
+        loadModels()
+        handleCancelEdit()
       } else {
-        // Update existing model pricing
-        const res = await fetch('/api/admin/model-pricing', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: editingId, ...editingData }),
-        })
-
-        const result = await res.json()
-        if (result.success) {
-          showMessage('success', 'Model pricing updated successfully')
-          loadModels()
-          handleCancelEdit()
-        } else {
-          showMessage('error', result.message || 'Failed to update model pricing')
-        }
+        showMessage('error', result.message || 'Failed to save model pricing')
       }
     } catch (error) {
       console.error('Save error:', error)
@@ -274,12 +250,21 @@ export default function ModelPricingPage() {
     }
   }
 
-  const handleNewModel = () => {
-    setShowNewForm(true)
+  const handleSelectModelForPricing = (modelName: string) => {
+    const existing = models.find((m) => m.model_name === modelName)
+    if (existing) {
+      setEditingId(existing.id)
+      setEditingData(existing)
+      return
+    }
+
+    // Create pricing for a mapped model that currently has no pricing row
+    const mapped = availableModels.find((m) => m.model_name === modelName)
+    setEditingId(null)
     setEditingData({
-      model_name: '',
+      model_name: modelName,
       price_per_request: 0.005,
-      provider: 'custom',
+      provider: mapped?.provider || 'custom',
       is_custom: true,
       is_active: true,
     })
@@ -298,44 +283,161 @@ export default function ModelPricingPage() {
         <div>
           <h1 className="text-4xl font-bold text-foreground">Model Pricing Management</h1>
           <p className="text-foreground/60 text-lg mt-2">
-            Configure per-request pricing for AI models
+            Configure per-request pricing for mapped and custom AI models
           </p>
-          {syncData && (
-            <div className="flex gap-4 mt-3">
-              <Badge variant="outline" className="bg-primary/10">
-                {syncData.total_models} total models
-              </Badge>
-              <Badge variant="outline" className="bg-green-500/10 text-green-500">
-                {syncData.with_pricing} with pricing
-              </Badge>
-              {syncData.missing_pricing > 0 && (
-                <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500">
-                  {syncData.missing_pricing} missing pricing
-                </Badge>
-              )}
-            </div>
-          )}
+          <div className="flex gap-4 mt-3">
+            <Badge variant="outline" className="bg-primary/10">
+              {availableModels.length} mapped models
+            </Badge>
+            <Badge variant="outline" className="bg-green-500/10 text-green-500">
+              {models.length} pricing rows
+            </Badge>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button
-            onClick={handleSyncModels}
             variant="outline"
+            onClick={loadSelectionAndAvailableModels}
+            disabled={selectionLoading}
             className="gap-2"
-            disabled={syncing}
+            title="Refresh mapped models list from Admin → Models"
           >
-            {syncing ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <Download className="w-4 h-4" />
-            )}
-            Sync Models
-          </Button>
-          <Button onClick={handleNewModel} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Add Model
+            <RefreshCw className={`w-4 h-4 ${selectionLoading ? 'animate-spin' : ''}`} />
+            Refresh Mapped Models
           </Button>
         </div>
       </div>
+
+      {/* Mapped Models (Admin → Models) */}
+      <Card className="p-6">
+        <div className="flex items-start justify-between gap-6">
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-foreground">Mapped Models (Admin → Models)</h2>
+            <p className="text-sm text-foreground/60 mt-1">
+              Only models that are currently mapped/enabled in <strong>Admin → Models</strong> are shown here.
+              Select a model to create or update its pricing.
+            </p>
+
+            {selectionLoading ? (
+              <div className="flex items-center gap-2 mt-4 text-foreground/60">
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span className="text-sm">Loading mapped models…</span>
+              </div>
+            ) : availableModels.length === 0 ? (
+              <div className="mt-4 p-4 rounded-lg border border-foreground/10 bg-foreground/[0.02]">
+                <p className="text-sm text-foreground/70">No mapped models are available.</p>
+                <p className="text-xs text-foreground/60 mt-1">
+                  Create/enable a model mapping in <strong>Admin → Models</strong> first.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Input
+                    value={modelSearch}
+                    onChange={(e) => setModelSearch(e.target.value)}
+                    placeholder="Search mapped models…"
+                    className="max-w-xl"
+                  />
+                  <Button
+                    onClick={saveSelectedModel}
+                    disabled={selectionSaving || !selectedModelName}
+                    className="gap-2"
+                    title="Persist selected model server-side"
+                  >
+                    {selectionSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Save Selection
+                  </Button>
+                </div>
+
+                <div className="text-xs text-foreground/60">
+                  Current selection:{' '}
+                  <span className="font-mono text-foreground">{selectedModelName || '—'}</span>
+                </div>
+
+                <div className="max-h-80 overflow-y-auto border border-foreground/10 rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Model</TableHead>
+                        <TableHead>Provider</TableHead>
+                        <TableHead>Pricing</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {availableModels
+                        .filter((m) => {
+                          const q = modelSearch.trim().toLowerCase()
+                          if (!q) return true
+                          return (
+                            m.model_name.toLowerCase().includes(q) ||
+                            m.display_name.toLowerCase().includes(q) ||
+                            (m.provider || '').toLowerCase().includes(q)
+                          )
+                        })
+                        .map((m) => {
+                          const pricing = models.find((p) => p.model_name === m.model_name)
+                          return (
+                            <TableRow key={m.model_name}>
+                              <TableCell>
+                                <div className="flex flex-col">
+                                  <span className="font-mono">{m.model_name}</span>
+                                  {m.display_name !== m.model_name && (
+                                    <span className="text-xs text-foreground/60">{m.display_name}</span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-sm text-foreground/70">
+                                {m.provider || '—'}
+                              </TableCell>
+                              <TableCell>
+                                {pricing ? (
+                                  <span className="font-mono">${pricing.price_per_request.toFixed(5)}</span>
+                                ) : (
+                                  <Badge variant="outline" className="text-foreground/60">
+                                    No pricing
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setSelectedModelName(m.model_name)
+                                      handleSelectModelForPricing(m.model_name)
+                                    }}
+                                    className="gap-2"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                    {pricing ? 'Edit' : 'Set Pricing'}
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {/* Info Notice about Filtering */}
+      <Card className="p-4 bg-primary/5 border-primary/20">
+        <div className="flex gap-2 items-start">
+          <AlertCircle className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+          <div className="text-sm text-foreground/70">
+            This page only shows models that are currently <strong>mapped/enabled</strong> in{' '}
+            <strong>Admin → Models</strong>. Unmapped/disabled models are hidden automatically.
+          </div>
+        </div>
+      </Card>
 
       {/* Message */}
       {message && (
@@ -351,113 +453,6 @@ export default function ModelPricingPage() {
         </div>
       )}
 
-      {/* Missing Models Section */}
-      {showMissingModels && syncData && syncData.missing_models.length > 0 && (
-        <Card className="p-6 border-yellow-500/30 bg-yellow-500/5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-yellow-500" />
-                Missing Pricing for {syncData.missing_models.length} Models
-              </h3>
-              <p className="text-sm text-foreground/60 mt-1">
-                These models are available in your system but don't have pricing configured yet
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowMissingModels(false)}
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-
-          <div className="mb-4 flex items-center gap-4">
-            <div className="flex-1">
-              <label className="text-sm text-foreground/60 mb-2 block">
-                Default Price per Request
-              </label>
-              <Input
-                type="number"
-                step="0.00001"
-                value={defaultPrice}
-                onChange={(e) => setDefaultPrice(e.target.value)}
-                className="w-48"
-                placeholder="0.005"
-              />
-            </div>
-            <div className="pt-6 flex gap-2">
-              <Button
-                onClick={handleSelectAllMissing}
-                variant="outline"
-                size="sm"
-              >
-                {selectedMissingModels.size === syncData.missing_models.length
-                  ? 'Deselect All'
-                  : 'Select All'}
-              </Button>
-              <Button
-                onClick={handleBulkImport}
-                disabled={selectedMissingModels.size === 0}
-                size="sm"
-                className="gap-2"
-              >
-                <CheckCircle className="w-4 h-4" />
-                Import {selectedMissingModels.size} Selected
-              </Button>
-            </div>
-          </div>
-
-          <div className="max-h-96 overflow-y-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <input
-                      type="checkbox"
-                      checked={
-                        selectedMissingModels.size === syncData.missing_models.length &&
-                        syncData.missing_models.length > 0
-                      }
-                      onChange={handleSelectAllMissing}
-                      className="w-4 h-4"
-                    />
-                  </TableHead>
-                  <TableHead>Model Name</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Provider</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {syncData.missing_models.map((model) => (
-                  <TableRow key={model.model_name}>
-                    <TableCell>
-                      <input
-                        type="checkbox"
-                        checked={selectedMissingModels.has(model.model_name)}
-                        onChange={() => handleToggleMissingModel(model.model_name)}
-                        className="w-4 h-4"
-                      />
-                    </TableCell>
-                    <TableCell className="font-mono">{model.model_name}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          model.source === 'server' ? 'default' : 'outline'
-                        }
-                      >
-                        {model.source === 'server' ? 'Server' : 'Custom Mapping'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="capitalize">{model.provider}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </Card>
-      )}
 
       {/* Filters */}
       <Card className="p-6">
@@ -544,83 +539,6 @@ export default function ModelPricingPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {/* New model form */}
-                {showNewForm && (
-                  <TableRow className="bg-primary/5">
-                    <TableCell>
-                      <Input
-                        value={editingData.model_name || ''}
-                        onChange={(e) =>
-                          updateEditingData('model_name', e.target.value)
-                        }
-                        placeholder="model-name"
-                        className="w-full"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        value={editingData.provider || ''}
-                        onChange={(e) =>
-                          updateEditingData('provider', e.target.value)
-                        }
-                        placeholder="provider"
-                        className="w-32"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        step="0.00001"
-                        value={editingData.price_per_request || ''}
-                        onChange={(e) =>
-                          updateEditingData('price_per_request', e.target.value)
-                        }
-                        placeholder="0.005"
-                        className="w-32"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Input
-                          type="number"
-                          step="0.00001"
-                          value={editingData.price_per_1k_input_tokens || ''}
-                          onChange={(e) =>
-                            updateEditingData('price_per_1k_input_tokens', e.target.value)
-                          }
-                          placeholder="In"
-                          className="w-20"
-                        />
-                        <Input
-                          type="number"
-                          step="0.00001"
-                          value={editingData.price_per_1k_output_tokens || ''}
-                          onChange={(e) =>
-                            updateEditingData('price_per_1k_output_tokens', e.target.value)
-                          }
-                          placeholder="Out"
-                          className="w-20"
-                        />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">Custom</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="default">Active</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={handleSave}>
-                          <Save className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={handleCancelEdit}>
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
 
                 {/* Existing models */}
                 {models.map((model) => {
@@ -765,7 +683,7 @@ export default function ModelPricingPage() {
                 {models.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-12 text-foreground/60">
-                      No model pricing found
+                      No pricing rows found yet. Select a mapped model above to create pricing.
                     </TableCell>
                   </TableRow>
                 )}

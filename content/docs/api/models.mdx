@@ -1,0 +1,92 @@
+---
+title: Models
+description: List available models and their metadata.
+---
+
+# Models
+
+Use the models endpoint to discover which model identifiers are currently available on your gateway. This is the canonical source of truth for model names you can pass to `model` in chat completions.
+
+## Endpoint
+
+```bash
+GET https://api.bluesminds.com/v1/models
+```
+
+## Authentication
+
+```bash
+Authorization: Bearer bm_live_your_api_key
+```
+
+## Example request
+
+```bash
+curl https://api.bluesminds.com/v1/models \
+  -H "Authorization: Bearer bm_live_your_api_key"
+```
+
+## Example response
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "gpt-4o",
+      "object": "model",
+      "owned_by": "openai"
+    },
+    {
+      "id": "claude-sonnet-4.5",
+      "object": "model",
+      "owned_by": "anthropic"
+    }
+  ]
+}
+```
+
+## How to use this in your app
+
+### Validate a model name before sending traffic
+
+```ts
+const res = await fetch('https://api.bluesminds.com/v1/models', {
+  headers: { Authorization: `Bearer ${process.env.BLUESMINDS_API_KEY}` },
+});
+
+if (!res.ok) throw new Error(`models failed: ${res.status}`);
+
+const { data } = await res.json();
+const allowed = new Set(data.map((m: { id: string }) => m.id));
+
+if (!allowed.has('claude-sonnet-4.5')) {
+  throw new Error('Model not available on this gateway');
+}
+```
+
+### Build a model picker UI
+
+Use the response to populate a dropdown and store the selected `id` as the model identifier.
+
+## Troubleshooting
+
+### 401 Unauthorized
+
+- Ensure the `Authorization` header is present and uses `Bearer ...`.
+- Verify you are using a valid key (test vs live) and the key is active.
+
+### 404 Not Found
+
+- Confirm you are calling `/v1/models` (not `/models`).
+- If self-hosting, confirm your gateway is running and reachable.
+
+### Empty list
+
+- No providers/models are configured on the gateway.
+- In self-hosted setups, add providers and model mappings in the admin UI, then retry.
+
+## Next steps
+
+- Use the returned `id` values with [`chat.mdx`](./chat.mdx)
+- For model selection guidance, see [`models.mdx`](../guides/models.mdx)

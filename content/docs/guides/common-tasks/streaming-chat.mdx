@@ -1,0 +1,77 @@
+---
+title: Stream chat responses
+description: Enable streaming for lower latency and better UX.
+---
+
+# Stream chat responses
+
+Streaming returns tokens incrementally so you can render output as it is generated.
+
+## Prerequisites
+
+- A valid API key (see [`authentication.mdx`](../../authentication.mdx))
+- A model that supports streaming on your gateway (verify via [`api/models.mdx`](../../api/models.mdx))
+
+## Enable streaming
+
+Set `stream: true` on the chat completions request.
+
+```ts
+const res = await fetch('https://api.bluesminds.com/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${process.env.BLUESMINDS_API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    model: 'gpt-4o',
+    stream: true,
+    messages: [{ role: 'user', content: 'Write a one-paragraph summary of TCP.' }],
+  }),
+});
+```
+
+## Read Server-Sent Events (SSE)
+
+BluesMinds streams responses as SSE (`data: ...` lines). A minimal reader:
+
+```ts
+const reader = res.body?.getReader();
+if (!reader) throw new Error('No response body (streaming not supported by this runtime)');
+
+const decoder = new TextDecoder();
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+
+  const chunk = decoder.decode(value);
+  for (const line of chunk.split('\n')) {
+    if (!line.startsWith('data: ')) continue;
+
+    const payload = line.slice('data: '.length).trim();
+    if (!payload || payload === '[DONE]') continue;
+
+    const event = JSON.parse(payload);
+    const delta = event.choices?.[0]?.delta?.content;
+    if (delta) process.stdout.write(delta);
+  }
+}
+```
+
+## Troubleshooting
+
+### Streaming works locally but not in production
+
+- Some serverless platforms buffer responses by default. Ensure your runtime supports streaming responses end-to-end.
+- If you are proxying through another service, confirm it does not buffer or strip SSE headers.
+
+### `res.body` is null
+
+- Your runtime does not expose a readable stream (common in some older fetch implementations).
+- Use a runtime that supports streaming (Node 18+ / modern edge runtimes) or switch to the SDK if it provides a streaming helper.
+
+## Next steps
+
+- See the full request schema in [`api/chat.mdx`](../../api/chat.mdx)
+- Add fallbacks for non-streaming clients via [`common-tasks/model-fallback.mdx`](./model-fallback.mdx)

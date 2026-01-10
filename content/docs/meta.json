@@ -3,12 +3,16 @@
   "pages": [
     "index",
     "quickstart",
-    "authentication"
-  ],
-  "---Getting Started---": {
-    "type": "separator"
-  },
-  "---API Reference---": {
-    "type": "separator"
-  }
+    "authentication",
+    "api/index",
+    "api/chat",
+    "api/models",
+    "guides/index",
+    "guides/setup-anthropic",
+    "guides/anthropic",
+    "guides/models",
+    "guides/common-tasks/rotate-api-keys",
+    "guides/common-tasks/streaming-chat",
+    "guides/common-tasks/model-fallback"
+  ]
 }

@@ -11,6 +11,15 @@ import type { UsageLogInsert, TokenSource } from '@/lib/types'
 export interface UsageData {
   userId: string
   apiKeyId: string
+  /**
+   * Stable per logical request. Used for idempotency and correlation.
+   * Prefer client-provided `Idempotency-Key` / `X-Idempotency-Key`.
+   */
+  idempotencyKey: string
+  /**
+   * Correlation id for logs/debugging. If not provided, will default to idempotencyKey.
+   */
+  requestId?: string
   serverId?: string
   endpoint: string
   model: string
@@ -30,7 +39,7 @@ export interface UsageData {
 // Log a single usage record
 export async function logUsage(data: UsageData): Promise<string> {
   try {
-    const requestId = generateRequestId()
+    const requestId = data.requestId || data.idempotencyKey || generateRequestId()
 
     // Validate token consistency
     let totalTokens = data.totalTokens
@@ -38,6 +47,7 @@ export async function logUsage(data: UsageData): Promise<string> {
       const expectedTotal = data.promptTokens + data.completionTokens
       if (Math.abs(totalTokens - expectedTotal) > 1) {
         logger.warn('Token count mismatch in usage logging', {
+          requestId,
           provided: totalTokens,
           expected: expectedTotal,
           promptTokens: data.promptTokens,
@@ -50,55 +60,104 @@ export async function logUsage(data: UsageData): Promise<string> {
     }
 
     // HYBRID: Use token-based pricing when tokens available, otherwise per-request
-    // This provides more accurate cost calculation
     const cost = calculateCostHybrid(
       data.model,
       data.promptTokens,
       data.completionTokens
     )
 
-    const usageLog: UsageLogInsert = {
+    if (!supabaseAdmin) {
+      logger.error('supabaseAdmin is not available; cannot persist usage', {
+        requestId,
+        idempotencyKey: data.idempotencyKey,
+      })
+      return requestId
+    }
+
+    // Two-phase, idempotent write:
+    // 1) Ensure a durable "started" row exists (upsert on (api_key_id, idempotency_key))
+    // 2) Finalize it with actual/estimated tokens (idempotent update guarded by status)
+    const startedPayload: Record<string, unknown> = {
       user_id: data.userId,
       api_key_id: data.apiKeyId,
       server_id: data.serverId || null,
       request_id: requestId,
+      idempotency_key: data.idempotencyKey,
       endpoint: data.endpoint,
       model: data.model,
       provider: data.provider || null,
-      // Token fields with source tracking
+      status: 'started',
+      started_at: new Date().toISOString(),
+      // Store initial estimate separately; final fields will be set on finalize
+      estimated_prompt_tokens: data.promptTokens,
+      estimated_completion_tokens: data.completionTokens,
+      estimated_total_tokens: totalTokens,
+      request_metadata: data.requestMetadata || {},
+      response_metadata: data.responseMetadata || {},
+    }
+
+    const { error: upsertError } = await (supabaseAdmin as any)
+      .from('usage_logs')
+      .upsert(startedPayload, { onConflict: 'api_key_id,idempotency_key' })
+
+    if (upsertError) {
+      logger.error('Failed to upsert started usage row', upsertError, {
+        requestId,
+        idempotencyKey: data.idempotencyKey,
+      })
+      // Don't throw - we don't want to fail the request if logging fails
+      return requestId
+    }
+
+    const finalizePayload: Record<string, unknown> = {
+      // Final token fields with source tracking
       prompt_tokens: data.promptTokens,
       completion_tokens: data.completionTokens,
       total_tokens: totalTokens,
       token_source: data.tokenSource || 'unknown',
-      // Hybrid cost calculation (token-based when available, per-request fallback)
+      // Hybrid cost calculation
       cost_usd: cost,
       response_time_ms: data.responseTimeMs,
       status_code: data.statusCode,
       is_error: data.isError,
       error_message: data.errorMessage || null,
-      request_metadata: data.requestMetadata || {},
-      response_metadata: data.responseMetadata || {},
+      status: 'finalized',
+      finalized_at: new Date().toISOString(),
     }
 
-    const { error } = await supabaseAdmin.from('usage_logs').insert(usageLog)
+    const { error: finalizeError } = await (supabaseAdmin as any)
+      .from('usage_logs')
+      .update(finalizePayload)
+      .eq('api_key_id', data.apiKeyId)
+      .eq('idempotency_key', data.idempotencyKey)
+      .neq('status', 'finalized')
 
-    if (error) {
-      logger.error('Failed to log usage', error, { requestId })
+    if (finalizeError) {
+      logger.error('Failed to finalize usage row', finalizeError, {
+        requestId,
+        idempotencyKey: data.idempotencyKey,
+      })
       // Don't throw - we don't want to fail the request if logging fails
     }
 
     return requestId
   } catch (error) {
     logger.error('Usage logging error', error)
-    return generateRequestId() // Return a request ID anyway
+    return data.requestId || data.idempotencyKey || generateRequestId()
   }
 }
 
 // Batch log multiple usage records (for efficiency)
 export async function logUsageBatch(records: UsageData[]): Promise<void> {
   try {
-    const usageLogs: UsageLogInsert[] = records.map((data) => {
-      const requestId = generateRequestId()
+    if (!supabaseAdmin) {
+      logger.error('supabaseAdmin is not available; cannot batch persist usage')
+      return
+    }
+
+    // Batch path is not used by v1 routes today; keep a simple insert.
+    const usageLogs: any[] = records.map((data) => {
+      const requestId = data.requestId || data.idempotencyKey || generateRequestId()
 
       // Validate token consistency
       let totalTokens = data.totalTokens
@@ -106,18 +165,17 @@ export async function logUsageBatch(records: UsageData[]): Promise<void> {
         const expectedTotal = data.promptTokens + data.completionTokens
         if (Math.abs(totalTokens - expectedTotal) > 1) {
           logger.warn('Token count mismatch in batch usage logging', {
+            requestId,
             provided: totalTokens,
             expected: expectedTotal,
             promptTokens: data.promptTokens,
             completionTokens: data.completionTokens,
             model: data.model,
           })
-          // Fix it by using the sum
           totalTokens = expectedTotal
         }
       }
 
-      // HYBRID: Use token-based pricing when tokens available, otherwise per-request
       const cost = calculateCostHybrid(
         data.model,
         data.promptTokens,
@@ -129,15 +187,14 @@ export async function logUsageBatch(records: UsageData[]): Promise<void> {
         api_key_id: data.apiKeyId,
         server_id: data.serverId || null,
         request_id: requestId,
+        idempotency_key: data.idempotencyKey,
         endpoint: data.endpoint,
         model: data.model,
         provider: data.provider || null,
-        // Token fields with source tracking
         prompt_tokens: data.promptTokens,
         completion_tokens: data.completionTokens,
         total_tokens: totalTokens,
         token_source: data.tokenSource || 'unknown',
-        // Hybrid cost calculation
         cost_usd: cost,
         response_time_ms: data.responseTimeMs,
         status_code: data.statusCode,
@@ -145,10 +202,12 @@ export async function logUsageBatch(records: UsageData[]): Promise<void> {
         error_message: data.errorMessage || null,
         request_metadata: data.requestMetadata || {},
         response_metadata: data.responseMetadata || {},
+        status: 'finalized',
+        finalized_at: new Date().toISOString(),
       }
     })
 
-    const { error } = await supabaseAdmin.from('usage_logs').insert(usageLogs)
+    const { error } = await (supabaseAdmin as any).from('usage_logs').insert(usageLogs)
 
     if (error) {
       logger.error('Failed to batch log usage', error)
@@ -172,6 +231,7 @@ export async function getUserUsageStats(
   unique_models: number
 }> {
   try {
+    if (!supabaseAdmin) throw new Error('supabaseAdmin is not available')
     let query = supabaseAdmin
       .from('usage_logs')
       .select('total_tokens, cost_usd, is_error, response_time_ms, model')
@@ -184,7 +244,7 @@ export async function getUserUsageStats(
       query = query.lte('created_at', endDate)
     }
 
-    const { data, error } = await query
+    const { data, error } = (await (query as any)) as { data: any[] | null; error: any }
 
     if (error) {
       logger.error('Failed to get user usage stats', error)
@@ -248,6 +308,7 @@ export async function getUsageByModel(
   }>
 > {
   try {
+    if (!supabaseAdmin) throw new Error('supabaseAdmin is not available')
     let query = supabaseAdmin
       .from('usage_logs')
       .select('model, total_tokens, cost_usd, response_time_ms')
@@ -260,7 +321,7 @@ export async function getUsageByModel(
       query = query.lte('created_at', endDate)
     }
 
-    const { data, error } = await query
+    const { data, error } = (await (query as any)) as { data: any[] | null; error: any }
 
     if (error) {
       logger.error('Failed to get usage by model', error)
@@ -323,6 +384,7 @@ export async function getDailyUsageStats(
   }>
 > {
   try {
+    if (!supabaseAdmin) throw new Error('supabaseAdmin is not available')
     let query = supabaseAdmin
       .from('daily_usage_stats')
       .select('*')
@@ -336,7 +398,7 @@ export async function getDailyUsageStats(
       query = query.lte('usage_date', endDate)
     }
 
-    const { data, error } = await query
+    const { data, error } = (await (query as any)) as { data: any[] | null; error: any }
 
     if (error) {
       logger.error('Failed to get daily usage stats', error)
@@ -381,6 +443,7 @@ export async function getRecentUsageLogs(
   has_more: boolean
 }> {
   try {
+    if (!supabaseAdmin) throw new Error('supabaseAdmin is not available')
     const offset = (page - 1) * perPage
 
     // Get total count
@@ -428,6 +491,7 @@ export async function exportUsageData(
   format: 'json' | 'csv' = 'json'
 ): Promise<string> {
   try {
+    if (!supabaseAdmin) throw new Error('supabaseAdmin is not available')
     let query = supabaseAdmin
       .from('usage_logs')
       .select('*')
