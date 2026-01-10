@@ -79,10 +79,17 @@ export async function POST(request: NextRequest) {
         .insert({
           id: user.id,
           email: user.email!,
-          full_name: user.user_metadata?.full_name || null,
+          full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
           company_name: user.user_metadata?.company_name || null,
           tier: 'free',
           status: 'active',
+          role: 'user',
+          credits_balance: 0,
+          free_requests_balance: 0,
+          referral_code: null,
+          referred_by: null,
+          created_at: user.created_at,
+          updated_at: new Date().toISOString(),
         })
         .select('id,email,metadata')
         .single()
