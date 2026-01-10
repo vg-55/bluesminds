@@ -36,11 +36,46 @@ export interface UsageData {
   responseMetadata?: Record<string, unknown>
 }
 
+// Verify that a usage log was successfully written
+async function verifyUsageLogWritten(
+  apiKeyId: string,
+  idempotencyKey: string
+): Promise<boolean> {
+  try {
+    if (!supabaseAdmin) return false
+
+    const { data, error } = await (supabaseAdmin as any)
+      .from('usage_logs')
+      .select('id, status')
+      .eq('api_key_id', apiKeyId)
+      .eq('idempotency_key', idempotencyKey)
+      .single()
+
+    if (error) {
+      logger.warn('Failed to verify usage log write', {
+        apiKeyId,
+        idempotencyKey,
+        errorCode: error.code,
+        errorMessage: error.message,
+      })
+      return false
+    }
+
+    return !!data && (data.status === 'started' || data.status === 'finalized')
+  } catch (error) {
+    logger.warn('Exception during usage log verification', error, {
+      apiKeyId,
+      idempotencyKey,
+    })
+    return false
+  }
+}
+
 // Log a single usage record
 export async function logUsage(data: UsageData): Promise<string> {
-  try {
-    const requestId = data.requestId || data.idempotencyKey || generateRequestId()
+  const requestId = data.requestId || data.idempotencyKey || generateRequestId()
 
+  try {
     // Validate token consistency
     let totalTokens = data.totalTokens
     if (totalTokens > 0) {
@@ -67,12 +102,38 @@ export async function logUsage(data: UsageData): Promise<string> {
     )
 
     if (!supabaseAdmin) {
-      logger.error('supabaseAdmin is not available; cannot persist usage', {
+      const errorMsg = 'CRITICAL: supabaseAdmin is not available; cannot persist usage'
+      logger.error(errorMsg, undefined, {
         requestId,
         idempotencyKey: data.idempotencyKey,
+        userId: data.userId,
+        apiKeyId: data.apiKeyId,
+        model: data.model,
+        tokens: totalTokens,
+        cost,
+      })
+      // This is a critical error - we're losing billing data
+      console.error('USAGE_LOGGING_FAILURE:', {
+        timestamp: new Date().toISOString(),
+        requestId,
+        userId: data.userId,
+        cost,
+        reason: 'supabaseAdmin_not_available',
       })
       return requestId
     }
+
+    // Log that we're attempting to persist usage
+    logger.info('Persisting usage log', {
+      requestId,
+      userId: data.userId,
+      model: data.model,
+      promptTokens: data.promptTokens,
+      completionTokens: data.completionTokens,
+      totalTokens,
+      cost,
+      tokenSource: data.tokenSource,
+    })
 
     // Two-phase, idempotent write:
     // 1) Ensure a durable "started" row exists (upsert on (api_key_id, idempotency_key))
@@ -101,12 +162,55 @@ export async function logUsage(data: UsageData): Promise<string> {
       .upsert(startedPayload, { onConflict: 'api_key_id,idempotency_key' })
 
     if (upsertError) {
-      logger.error('Failed to upsert started usage row', upsertError, {
+      logger.error('CRITICAL: Failed to upsert started usage row', upsertError, {
         requestId,
         idempotencyKey: data.idempotencyKey,
+        userId: data.userId,
+        apiKeyId: data.apiKeyId,
+        model: data.model,
+        cost,
+        errorCode: upsertError.code,
+        errorMessage: upsertError.message,
+        errorDetails: upsertError.details,
+      })
+      // This is a critical error - we're losing billing data
+      console.error('USAGE_LOGGING_FAILURE:', {
+        timestamp: new Date().toISOString(),
+        phase: 'upsert_started',
+        requestId,
+        userId: data.userId,
+        cost,
+        errorCode: upsertError.code,
+        errorMessage: upsertError.message,
       })
       // Don't throw - we don't want to fail the request if logging fails
       return requestId
+    }
+
+    // Verify the write succeeded
+    const writeVerified = await verifyUsageLogWritten(data.apiKeyId, data.idempotencyKey)
+    if (!writeVerified) {
+      logger.error('CRITICAL: Usage log write verification failed - row not found after upsert', undefined, {
+        requestId,
+        idempotencyKey: data.idempotencyKey,
+        userId: data.userId,
+        apiKeyId: data.apiKeyId,
+        model: data.model,
+        cost,
+      })
+      console.error('USAGE_LOGGING_FAILURE:', {
+        timestamp: new Date().toISOString(),
+        phase: 'verify_upsert',
+        requestId,
+        userId: data.userId,
+        cost,
+        reason: 'write_not_verified',
+      })
+    } else {
+      logger.info('Successfully persisted and verified started usage row', {
+        requestId,
+        idempotencyKey: data.idempotencyKey,
+      })
     }
 
     const finalizePayload: Record<string, unknown> = {
@@ -125,7 +229,7 @@ export async function logUsage(data: UsageData): Promise<string> {
       finalized_at: new Date().toISOString(),
     }
 
-    const { error: finalizeError } = await (supabaseAdmin as any)
+    const { error: finalizeError, count: updateCount } = await (supabaseAdmin as any)
       .from('usage_logs')
       .update(finalizePayload)
       .eq('api_key_id', data.apiKeyId)
@@ -133,17 +237,58 @@ export async function logUsage(data: UsageData): Promise<string> {
       .neq('status', 'finalized')
 
     if (finalizeError) {
-      logger.error('Failed to finalize usage row', finalizeError, {
+      logger.error('CRITICAL: Failed to finalize usage row', finalizeError, {
         requestId,
         idempotencyKey: data.idempotencyKey,
+        userId: data.userId,
+        apiKeyId: data.apiKeyId,
+        model: data.model,
+        cost,
+        errorCode: finalizeError.code,
+        errorMessage: finalizeError.message,
+        errorDetails: finalizeError.details,
+      })
+      // This is a critical error - we're losing billing data
+      console.error('USAGE_LOGGING_FAILURE:', {
+        timestamp: new Date().toISOString(),
+        phase: 'finalize',
+        requestId,
+        userId: data.userId,
+        cost,
+        errorCode: finalizeError.code,
+        errorMessage: finalizeError.message,
       })
       // Don't throw - we don't want to fail the request if logging fails
+    } else {
+      logger.info('Successfully finalized usage row', {
+        requestId,
+        idempotencyKey: data.idempotencyKey,
+        promptTokens: data.promptTokens,
+        completionTokens: data.completionTokens,
+        totalTokens,
+        cost,
+        tokenSource: data.tokenSource,
+      })
     }
 
     return requestId
   } catch (error) {
-    logger.error('Usage logging error', error)
-    return data.requestId || data.idempotencyKey || generateRequestId()
+    logger.error('CRITICAL: Usage logging exception', error, {
+      requestId,
+      userId: data.userId,
+      apiKeyId: data.apiKeyId,
+      model: data.model,
+      idempotencyKey: data.idempotencyKey,
+    })
+    // This is a critical error - we're losing billing data
+    console.error('USAGE_LOGGING_FAILURE:', {
+      timestamp: new Date().toISOString(),
+      phase: 'exception',
+      requestId,
+      userId: data.userId,
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return requestId
   }
 }
 
@@ -151,9 +296,21 @@ export async function logUsage(data: UsageData): Promise<string> {
 export async function logUsageBatch(records: UsageData[]): Promise<void> {
   try {
     if (!supabaseAdmin) {
-      logger.error('supabaseAdmin is not available; cannot batch persist usage')
+      logger.error('CRITICAL: supabaseAdmin is not available; cannot batch persist usage', undefined, {
+        recordCount: records.length,
+      })
+      console.error('USAGE_LOGGING_FAILURE:', {
+        timestamp: new Date().toISOString(),
+        phase: 'batch',
+        recordCount: records.length,
+        reason: 'supabaseAdmin_not_available',
+      })
       return
     }
+
+    logger.info('Batch persisting usage logs', {
+      recordCount: records.length,
+    })
 
     // Batch path is not used by v1 routes today; keep a simple insert.
     const usageLogs: any[] = records.map((data) => {
@@ -210,10 +367,34 @@ export async function logUsageBatch(records: UsageData[]): Promise<void> {
     const { error } = await (supabaseAdmin as any).from('usage_logs').insert(usageLogs)
 
     if (error) {
-      logger.error('Failed to batch log usage', error)
+      logger.error('CRITICAL: Failed to batch log usage', error, {
+        recordCount: records.length,
+        errorCode: error.code,
+        errorMessage: error.message,
+        errorDetails: error.details,
+      })
+      console.error('USAGE_LOGGING_FAILURE:', {
+        timestamp: new Date().toISOString(),
+        phase: 'batch_insert',
+        recordCount: records.length,
+        errorCode: error.code,
+        errorMessage: error.message,
+      })
+    } else {
+      logger.info('Successfully batch persisted usage logs', {
+        recordCount: records.length,
+      })
     }
   } catch (error) {
-    logger.error('Batch usage logging error', error)
+    logger.error('CRITICAL: Batch usage logging exception', error, {
+      recordCount: records.length,
+    })
+    console.error('USAGE_LOGGING_FAILURE:', {
+      timestamp: new Date().toISOString(),
+      phase: 'batch_exception',
+      recordCount: records.length,
+      error: error instanceof Error ? error.message : String(error),
+    })
   }
 }
 
