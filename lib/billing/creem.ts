@@ -51,6 +51,15 @@ export async function createCreemCheckout(params: {
   const creem = getCreemClient()
 
   try {
+    logger.info('Creating Creem checkout', {
+      userId,
+      tier,
+      productId,
+      email,
+      hasExistingCustomerId: !!existingCustomerId,
+      apiKeyPrefix: env.CREEM_API_KEY!.substring(0, 15) + '...',
+    })
+
     const checkout = await creem.createCheckout({
       xApiKey: env.CREEM_API_KEY!,
       createCheckoutRequest: {
@@ -83,8 +92,16 @@ export async function createCreemCheckout(params: {
     }
 
     return { checkoutId, url, customerId }
-  } catch (error) {
-    logger.error('Failed to create Creem checkout', error, { userId, tier })
+  } catch (error: any) {
+    logger.error('Failed to create Creem checkout', error, {
+      userId,
+      tier,
+      productId,
+      errorMessage: error?.message,
+      errorStatus: error?.status || error?.statusCode,
+      errorBody: error?.body,
+      apiKeyPrefix: env.CREEM_API_KEY!.substring(0, 15) + '...',
+    })
     throw error
   }
 }
