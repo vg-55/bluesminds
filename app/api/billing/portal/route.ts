@@ -3,15 +3,32 @@
 // ============================================================================
 
 import { NextRequest } from 'next/server'
-import { createServerClient, supabaseAdmin } from '@/lib/supabase/client'
+import { createServerClient as createServerClientSSR } from '@supabase/ssr'
+import { supabaseAdmin } from '@/lib/supabase/client'
 import { createCreemCustomerPortalLink } from '@/lib/billing/creem'
 import { errorResponse, successResponse, AuthenticationError } from '@/lib/utils/errors'
 import { logger } from '@/lib/utils/logger'
+import { env } from '@/lib/config/env'
 
 export async function POST(request: NextRequest) {
   try {
+    // Create Supabase client from request cookies (API route compatible)
+    const supabase = createServerClientSSR(
+      env.NEXT_PUBLIC_SUPABASE_URL,
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            // No-op in API routes - cookies are set by middleware
+          },
+        },
+      }
+    )
+
     // Get current user
-    const supabase = await createServerClient()
     const {
       data: { user },
       error: authError,
