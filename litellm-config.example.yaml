@@ -1,0 +1,108 @@
+# LiteLLM Configuration Example for Anthropic Claude
+# Copy this file to litellm-config.yaml and update with your settings
+
+model_list:
+  # ============================================================================
+  # Anthropic Claude Models
+  # ============================================================================
+
+  # Claude Opus 4.5 - Most Capable
+  - model_name: anthropic/claude-opus-4-5-20251031
+    litellm_params:
+      model: claude-opus-4-5-20251031
+      api_key: os.environ/ANTHROPIC_API_KEY
+      api_base: https://api.anthropic.com
+      max_tokens: 4096
+      timeout: 120
+
+  # Claude Sonnet 4.5 - Balanced (Recommended)
+  - model_name: anthropic/claude-sonnet-4-5-20250929
+    litellm_params:
+      model: claude-sonnet-4-5-20250929
+      api_key: os.environ/ANTHROPIC_API_KEY
+      api_base: https://api.anthropic.com
+      max_tokens: 4096
+      timeout: 60
+
+  # Claude Haiku 4 - Fastest
+  - model_name: anthropic/claude-haiku-4-0-20250101
+    litellm_params:
+      model: claude-haiku-4-0-20250101
+      api_key: os.environ/ANTHROPIC_API_KEY
+      api_base: https://api.anthropic.com
+      max_tokens: 4096
+      timeout: 30
+
+  # ============================================================================
+  # Friendly Aliases (Recommended for easy switching)
+  # ============================================================================
+
+  - model_name: claude-opus-4.5
+    litellm_params:
+      model: claude-opus-4-5-20251031
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: claude-sonnet-4.5
+    litellm_params:
+      model: claude-sonnet-4-5-20250929
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: claude-haiku-4
+    litellm_params:
+      model: claude-haiku-4-0-20250101
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # ============================================================================
+  # Additional Anthropic Models (Claude 3 series)
+  # ============================================================================
+
+  - model_name: claude-3-opus
+    litellm_params:
+      model: claude-3-opus-20240229
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: claude-3-sonnet
+    litellm_params:
+      model: claude-3-sonnet-20240229
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: claude-3-haiku
+    litellm_params:
+      model: claude-3-haiku-20240307
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+# ============================================================================
+# General Settings
+# ============================================================================
+
+general_settings:
+  master_key: your-litellm-master-key-optional  # Optional: for securing LiteLLM
+  database_url: null  # Optional: for request logging
+
+litellm_settings:
+  drop_params: true  # Drop unsupported params instead of erroring
+  set_verbose: false  # Set to true for debugging
+  json_logs: true  # JSON formatted logs
+
+# ============================================================================
+# Usage Instructions:
+# ============================================================================
+#
+# 1. Copy this file: cp litellm-config.example.yaml litellm-config.yaml
+# 2. Set your API key: export ANTHROPIC_API_KEY=sk-ant-your-key-here
+# 3. Start LiteLLM:
+#
+#    Via Docker:
+#    docker run -d --name litellm -p 4000:4000 \
+#      -v $(pwd)/litellm-config.yaml:/app/config.yaml \
+#      -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
+#      ghcr.io/berriai/litellm:main-latest \
+#      --config /app/config.yaml
+#
+#    Via pip:
+#    litellm --config litellm-config.yaml --port 4000
+#
+# 4. Test: curl http://localhost:4000/health
+# 5. List models: curl http://localhost:4000/models
+#
+# For more information: https://docs.litellm.ai/docs/

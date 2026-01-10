@@ -55,6 +55,7 @@ const CONFIG = {
 
   // Model mappings to create
   modelMappings: [
+    // Standard naming
     {
       custom_name: 'claude-opus-4.5',
       actual_model_name: 'anthropic/claude-opus-4-5-20251031',
@@ -76,6 +77,31 @@ const CONFIG = {
       actual_model_name: 'anthropic/claude-haiku-4-0-20250101',
       display_name: 'Claude Haiku 4',
       description: 'Fastest Claude model for simple tasks',
+      priority: 1,
+      weight: 1.0,
+    },
+    // Code-optimized naming (code/ prefix)
+    {
+      custom_name: 'code/claude-opus-4-5',
+      actual_model_name: 'code/claude-opus-4-5',
+      display_name: 'Claude Opus 4.5 (Code)',
+      description: 'Claude Opus optimized for coding tasks',
+      priority: 1,
+      weight: 1.0,
+    },
+    {
+      custom_name: 'code/claude-sonnet-4-5',
+      actual_model_name: 'code/claude-sonnet-4-5',
+      display_name: 'Claude Sonnet 4.5 (Code)',
+      description: 'Claude Sonnet optimized for coding tasks',
+      priority: 1,
+      weight: 1.0,
+    },
+    {
+      custom_name: 'code/claude-haiku-4',
+      actual_model_name: 'code/claude-haiku-4',
+      display_name: 'Claude Haiku 4 (Code)',
+      description: 'Claude Haiku optimized for simple coding tasks',
       priority: 1,
       weight: 1.0,
     },
