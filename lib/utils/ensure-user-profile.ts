@@ -5,6 +5,7 @@
 // Call this in API routes after authentication checks
 
 import { SupabaseClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * Ensures the authenticated user has a profile in the users table
@@ -27,7 +28,13 @@ export async function ensureUserProfile(
       .maybeSingle()
 
     if (checkError) {
-      console.error('[ensureUserProfile] Error checking profile:', checkError)
+      logger.error('[ensureUserProfile] Error checking profile', {
+        userId,
+        message: checkError.message,
+        code: (checkError as any).code,
+        details: (checkError as any).details,
+        hint: (checkError as any).hint,
+      })
       return false
     }
 
@@ -36,15 +43,16 @@ export async function ensureUserProfile(
       return true
     }
 
-    console.warn(`[ensureUserProfile] Profile missing for user ${userId}, creating...`)
+    logger.warn('[ensureUserProfile] Profile missing, creating...', { userId })
 
     // Get user info from auth.users
-    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(
-      userId
-    )
+    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId)
 
     if (authError || !authUser.user) {
-      console.error('[ensureUserProfile] Could not fetch auth user:', authError)
+      logger.error('[ensureUserProfile] Could not fetch auth user', {
+        userId,
+        message: authError?.message,
+      })
       return false
     }
 
@@ -75,14 +83,21 @@ export async function ensureUserProfile(
     })
 
     if (createError) {
-      console.error('[ensureUserProfile] Failed to create profile:', createError)
+      logger.error('[ensureUserProfile] Failed to create profile', {
+        userId,
+        email: user.email,
+        message: createError.message,
+        code: (createError as any).code,
+        details: (createError as any).details,
+        hint: (createError as any).hint,
+      })
       return false
     }
 
-    console.log(`[ensureUserProfile] Successfully created profile for ${user.email}`)
+    logger.info('[ensureUserProfile] Successfully created profile', { userId, email: user.email })
     return true
   } catch (error) {
-    console.error('[ensureUserProfile] Unexpected error:', error)
+    logger.error('[ensureUserProfile] Unexpected error', { userId, error })
     return false
   }
 }

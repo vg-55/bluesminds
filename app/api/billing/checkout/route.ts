@@ -8,6 +8,7 @@ import { supabaseAdmin } from '@/lib/supabase/client'
 import { createCreemCheckout } from '@/lib/billing/creem'
 import { errorResponse, successResponse, ValidationError, AuthenticationError } from '@/lib/utils/errors'
 import { logger } from '@/lib/utils/logger'
+import { ensureUserProfile } from '@/lib/utils/ensure-user-profile'
 import { z } from 'zod'
 import { env } from '@/lib/config/env'
 
@@ -63,43 +64,26 @@ export async function POST(request: NextRequest) {
       throw new Error('Server misconfigured: supabaseAdmin unavailable')
     }
 
-    // Get user profile
-    let { data: profile } = await supabaseAdmin
+    // Ensure user profile exists (edge case: authenticated but no profile)
+    const ensured = await ensureUserProfile(supabaseAdmin, user.id)
+    if (!ensured) {
+      logger.error('Checkout failed: could not ensure user profile exists', { userId: user.id })
+      throw new Error('Failed to ensure user profile')
+    }
+
+    // Get user profile (after ensure)
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('users')
       .select('id,email,metadata')
       .eq('id', user.id)
       .single()
 
-    // If profile doesn't exist, create it (edge case: authenticated but no profile)
-    if (!profile) {
-      logger.warn('User profile missing during checkout, creating...', { userId: user.id })
-
-      const { data: newProfile, error: createError } = await supabaseAdmin
-        .from('users')
-        .insert({
-          id: user.id,
-          email: user.email!,
-          full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
-          company_name: user.user_metadata?.company_name || null,
-          tier: 'free',
-          status: 'active',
-          role: 'user',
-          credits_balance: 0,
-          free_requests_balance: 0,
-          referral_code: null,
-          referred_by: null,
-          created_at: user.created_at,
-          updated_at: new Date().toISOString(),
-        })
-        .select('id,email,metadata')
-        .single()
-
-      if (createError) {
-        logger.error('Failed to create user profile during checkout', createError)
-        throw new Error('User profile not found')
-      }
-
-      profile = newProfile
+    if (profileError || !profile) {
+      logger.error('Checkout failed: could not load user profile after ensure', {
+        userId: user.id,
+        profileError: profileError?.message,
+      })
+      throw new Error('Failed to load user profile')
     }
 
     const existingCreemCustomerId = (profile as any).metadata?.creem_customer_id as
