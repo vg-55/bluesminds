@@ -64,14 +64,35 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user profile
-    const { data: profile } = await supabaseAdmin
+    let { data: profile } = await supabaseAdmin
       .from('users')
       .select('id,email,metadata')
       .eq('id', user.id)
       .single()
 
+    // If profile doesn't exist, create it (edge case: authenticated but no profile)
     if (!profile) {
-      throw new Error('User profile not found')
+      logger.warn('User profile missing during checkout, creating...', { userId: user.id })
+
+      const { data: newProfile, error: createError } = await supabaseAdmin
+        .from('users')
+        .insert({
+          id: user.id,
+          email: user.email!,
+          full_name: user.user_metadata?.full_name || null,
+          company_name: user.user_metadata?.company_name || null,
+          tier: 'free',
+          status: 'active',
+        })
+        .select('id,email,metadata')
+        .single()
+
+      if (createError) {
+        logger.error('Failed to create user profile during checkout', createError)
+        throw new Error('User profile not found')
+      }
+
+      profile = newProfile
     }
 
     const existingCreemCustomerId = (profile as any).metadata?.creem_customer_id as
