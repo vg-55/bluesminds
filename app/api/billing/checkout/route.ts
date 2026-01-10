@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
+      logger.error('Checkout authentication failed', { authError, hasUser: !!user, cookies: request.cookies.getAll().map(c => c.name) })
       throw new AuthenticationError('Not authenticated')
     }
 
