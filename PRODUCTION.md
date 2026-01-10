@@ -18,7 +18,7 @@ Complete guide for deploying BluesMinds AI Gateway to production.
 - [ ] Database migrations have been run
 - [ ] At least one LiteLLM server is configured and healthy
 - [ ] Admin emails are configured
-- [ ] Stripe is configured (if using billing)
+- [ ] Creem is configured (if using billing)
 - [ ] Monitoring and error tracking are enabled
 
 ### Testing

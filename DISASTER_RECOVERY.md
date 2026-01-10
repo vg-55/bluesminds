@@ -334,7 +334,7 @@ echo "Config backup completed"
 
 ### Scenario 5: Third-Party Service Outage
 
-**Examples:** Supabase, Stripe, Vercel outage
+**Examples:** Supabase, Creem, Vercel outage
 
 **Impact:** MEDIUM-HIGH
 **Likelihood:** LOW
@@ -355,10 +355,10 @@ echo "Config backup completed"
      - Use cached data
      - Queue write operations
 
-   Stripe outage:
+   Creem outage:
      - Disable new subscriptions temporarily
-     - Queue payment processing
-     - Use fallback payment processor
+     - Display maintenance message on billing pages
+     - Queue subscription changes for later processing
 
    Vercel outage:
      - Failover to backup deployment (AWS/GCP)
@@ -454,10 +454,11 @@ Vercel:
   Status: https://vercel-status.com
   Emergency: [Enterprise support number]
 
-Stripe:
-  Support: support@stripe.com
-  Status: https://status.stripe.com
-  Phone: 1-888-926-2289
+Creem:
+  Support: TBD - See Creem documentation
+  Status: TBD - Check Creem dashboard
+  Docs: https://docs.creem.io
+  Dashboard: https://www.creem.io/dashboard/developers
 ```
 
 ## Testing & Drills
@@ -618,7 +619,7 @@ Schedule within 48 hours:
 **External:**
 - Supabase Support: support@supabase.io
 - Vercel Support: support@vercel.com
-- Stripe Support: 1-888-926-2289
+- Creem Support: See https://docs.creem.io for contact information
 - AWS Support: [Account-specific]
 
 **Legal:**

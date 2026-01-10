@@ -607,16 +607,14 @@ Get detailed request logs.
 
 ### Create Checkout Session
 
-Create a Stripe checkout session for subscription.
+Create a Creem checkout session for subscription.
 
 **Endpoint:** `POST /api/billing/checkout`
 
 **Request Body:**
 ```json
 {
-  "price_id": "price_starter",
-  "success_url": "https://your-app.com/success",
-  "cancel_url": "https://your-app.com/cancel"
+  "tier": "starter"
 }
 ```
 
@@ -625,15 +623,14 @@ Create a Stripe checkout session for subscription.
 {
   "success": true,
   "data": {
-    "session_id": "cs_test_...",
-    "url": "https://checkout.stripe.com/..."
+    "url": "https://api.creem.io/v1/checkouts/..."
   }
 }
 ```
 
 ### Customer Portal
 
-Get Stripe customer portal URL.
+Get Creem customer portal URL.
 
 **Endpoint:** `POST /api/billing/portal`
 
@@ -642,7 +639,7 @@ Get Stripe customer portal URL.
 {
   "success": true,
   "data": {
-    "url": "https://billing.stripe.com/..."
+    "url": "https://portal.creem.io/..."
   }
 }
 ```

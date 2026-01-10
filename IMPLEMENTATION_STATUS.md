@@ -159,7 +159,7 @@
 ## 🎯 Optional Enhancements (Not Started)
 
 ### Billing Integration
-- [ ] Stripe webhook handler
+- [ ] Creem webhook handler
 - [ ] Subscription management
 - [ ] Invoice generation cron job
 - [ ] Payment processing
@@ -276,7 +276,7 @@ Response to User
 
 ### Short Term (Optional):
 1. Build basic dashboard UI
-2. Add Stripe billing integration
+2. Add Creem billing integration
 3. Write tests
 4. Set up monitoring (Sentry, Logtail)
 

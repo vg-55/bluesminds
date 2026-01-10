@@ -24,7 +24,7 @@ Congratulations! BluesMinds AI Gateway is now **fully implemented** with both ba
 - ✅ Billing & Subscription Management
 - ✅ Login & Signup Pages
 
-### 3. **Stripe Billing Integration** ✅
+### 3. **Creem Billing Integration** ✅
 - ✅ Checkout Sessions
 - ✅ Billing Portal
 - ✅ Webhook Handler
@@ -52,7 +52,7 @@ lib/
 │   ├── usage-tracker.ts
 │   └── health-monitor.ts
 ├── billing/
-│   └── stripe.ts     # Stripe integration
+│   └── creem.ts      # Creem integration
 ├── config/
 │   ├── env.ts
 │   └── app.ts
@@ -76,7 +76,7 @@ app/api/
 │   ├── embeddings/
 │   └── models/
 ├── usage/            # Usage analytics
-├── billing/          # Billing & Stripe
+├── billing/          # Billing & Creem
 └── admin/            # Admin management
 ```
 
@@ -162,7 +162,7 @@ Edit `.env.local`:
 - **Supabase**: Add your project URL and keys
 - **Secrets**: Generate with `openssl rand -base64 32`
 - **LiteLLM**: Add your server URL
-- **Stripe**: Add keys and price IDs (optional)
+- **Creem**: Add API key and product IDs (see https://docs.creem.io) (optional)
 - **Admin**: Add your email for admin access
 
 ### 3. Run Database Migrations
@@ -222,22 +222,25 @@ print(response.choices[0].message.content)
 
 ---
 
-## 💳 Stripe Setup (Optional)
+## 💳 Creem Setup (Optional)
 
-### 1. Create Stripe Products
-In Stripe Dashboard:
+### 1. Create Creem Products
+In Creem Dashboard (https://www.creem.io/dashboard/developers):
 1. Create 3 products: Starter, Pro, Enterprise
-2. Add recurring prices (monthly)
-3. Copy price IDs to `.env.local`
+2. Add recurring subscriptions (monthly)
+3. Copy product IDs to `.env.local`
 
 ### 2. Configure Webhook
-1. Go to Stripe Dashboard → Webhooks
+1. Go to Creem Dashboard → Webhooks
 2. Add endpoint: `https://your-domain.com/api/billing/webhook`
 3. Select events:
-   - `customer.subscription.*`
-   - `invoice.paid`
-   - `invoice.payment_failed`
+   - `subscription.created`
+   - `subscription.updated`
+   - `subscription.canceled`
+   - `checkout.completed`
 4. Copy webhook secret to `.env.local`
+
+For more details, see: https://docs.creem.io/features/checkout/checkout-api
 
 ---
 
@@ -249,7 +252,7 @@ In Stripe Dashboard:
 3. **Gateway Proxy** - OpenAI-compatible API
 4. **Rate Limiting** - Full implementation
 5. **Usage Tracking** - Complete analytics
-6. **Billing** - Stripe integration
+6. **Billing** - Creem integration
 7. **Dashboard** - Full UI
 8. **Admin Panel** - Server management
 
@@ -308,11 +311,11 @@ Before going to production:
 - [ ] Enable HTTPS
 - [ ] Set up monitoring (Sentry, Logtail)
 
-### Stripe (Optional):
-- [ ] Create Stripe products & prices
+### Creem (Optional):
+- [ ] Create Creem products (https://www.creem.io/dashboard/developers)
 - [ ] Set up webhook endpoint
 - [ ] Test subscription flow
-- [ ] Configure price IDs in env
+- [ ] Configure product IDs in env
 
 ### Recommended:
 - [ ] Add tests (unit, integration, e2e)
@@ -347,7 +350,7 @@ Before going to production:
 └─────────────┘  │     └───────┬───────┘  │
                  │             │          │
           ┌──────▼─────┐   ┌──▼────┐  ┌──▼────┐
-          │   Stripe   │   │OpenAI │  │Claude │
+          │   Creem    │   │OpenAI │  │Claude │
           │  (Billing) │   └───────┘  └───────┘
           └────────────┘
 ```
@@ -395,4 +398,4 @@ You now have a **production-ready AI gateway** with:
 
 ---
 
-Built with ❤️ using Next.js, Supabase, and Stripe
+Built with ❤️ using Next.js, Supabase, and Creem

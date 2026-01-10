@@ -47,7 +47,7 @@ Edit `.env.local` and fill in your values:
 - `NEXT_PUBLIC_SUPABASE_URL` and keys from your Supabase project
 - `JWT_SECRET` and `API_KEY_SECRET` (generate with `openssl rand -base64 32`)
 - `LITELLM_SERVER_1_URL` - Your LiteLLM server URL
-- Other optional services (Stripe, Redis, etc.)
+- Other optional services (Creem, Redis, etc.)
 
 3. **Run database migrations**:
 ```bash
